@@ -1,0 +1,4 @@
+mediapipe
+moviepy
+pandas
+scikit-learn

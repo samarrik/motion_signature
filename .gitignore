@@ -1,0 +1,17 @@
+# Ignore datasets
+dataset/
+dataset_clips/
+extracted/
+
+# Ignore OpenFace instalaltion folder
+OpenFace
+
+# Ignore other models
+models
+
+# Ignore garbage py files and folders
+__init__.py
+__pycache__/
+
+# Ignore the venv
+venv_zel/
