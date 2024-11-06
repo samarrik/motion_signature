@@ -1,17 +1,10 @@
-# Ignore datasets
-dataset/
-dataset_clips/
-extracted/
+data/*
+!data/correlations.csv
 
-# Ignore OpenFace instalaltion folder
-OpenFace
+utils/OpenFace
 
-# Ignore other models
-models
+venv_zel/
+venv_df/
 
 # Ignore garbage py files and folders
-__init__.py
 __pycache__/
-
-# Ignore the venv
-venv_zel/

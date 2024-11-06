@@ -2,41 +2,31 @@
 
 echo "Please install NVIDIA drivers, CUDA, and WSL2 using the instructions from the official NVIDIA website."
 read -p "Have you completed the installation? (y/n): " installation_done
-if [[ "$installation_done" != "y" ]]; then
+if [[ "$installation_done" != "y" && "$installation_done" != "Y" && "$installation_done" != "yes" && "$installation_done" != "Yes" && "$installation_done" != "yea" && "$installation_done" != "yeah" && "$installation_done" != "YES" ]]; then
     echo "Please complete the installation before proceeding."
     exit 1
 fi
 
 echo "Installing Python 3.9"
 sudo add-apt-repository ppa:deadsnakes/ppa
-sudo apt update
-sudo apt upgrad
+sudo apt update && sudo apt upgrade -y
 sudo apt install -y python3.9 python3.9-venv python3.9-dev
 
 echo "Setting up Python virtual environment with Python 3.9"
-python3.9 -m venv venv_zel
-source venv_zel/bin/activate
+python3.9 -m venv venv_df
+source venv_df/bin/activate
 pip install --upgrade pip
 
 echo "Installing Python requirements"
 pip install -qr requirements.txt
 
 echo "Downloading required models"
-mkdir -p ./models/mediapipe
-sudo wget -O ./models/mediapipe/pose_landmarker.task -q https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_heavy/float16/1/pose_landmarker_heavy.task   
-
-echo "Downloading required datasets"
-sudo apt install unzip
-wget -O datasets/dataset_clips.zip --no-check-certificate -r 'https://drive.usercontent.google.com/download?id=1Nd9i3Wsr4FIySUrQJN-6m3eKLhjG8ute&export=download&authuser=0&confirm=t&uuid=46b14fe2-59c9-4e50-9c9f-b9720984f5bd&at=AENtkXYKL__f2SiUg7n8cYMWbI4u:1730645134616'
-unzip datasets/dataset_clips.zip
-rm datasets/dataset_clips.zip
-
-# wget -O datasets/datasets/extracted_correlations.csv --no-check-certificate -r 'https://drive.google.com/uc?export=download&id=[ID]'
+mkdir -p .data/models/mediapipe
+sudo wget -O .data/models/mediapipe/pose_landmarker.task -q https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_heavy/float16/1/pose_landmarker_heavy.task   
 
 echo "Installing OpenFace"
 sudo add-apt-repository ppa:kisak/kisak-mesa
-sudo apt update
-sudo apt upgrade
+sudo apt update && sudo apt upgrade -y
 sudo apt install -y \
   build-essential \
   cmake \
@@ -52,4 +42,4 @@ sed -i 's|DEFAULT_INSTALL_PATH = Path(os.environ\["HOME"\]) / "OpenFace"|DEFAULT
 python install_openface.py
 sudo rm install_openface.py
 
-echo "Everything is ready, run main.py"
+echo "Everything is ready, run extract.py"
