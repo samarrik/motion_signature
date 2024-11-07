@@ -221,9 +221,6 @@ def correlation_extractor(clips_dataset_path: str) -> pd.DataFrame:
 
             df_correlations[clip_name] = pd.Series(correlations_dict)
 
-            # Add binary feature to df_correlations
-            df_correlations.loc['pristine', clip_name] = 1 if 'pristine' in clip_name else 0
-
         except Exception as e:
             logging.error(f"Failed to compute correlations for clip {clip_name}: {e}")
             continue
