@@ -3,3 +3,4 @@ moviepy
 pandas
 scikit-learn
 jupyter
+matplotlib
