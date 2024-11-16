@@ -1,5 +1,5 @@
 mediapipe
-moviepy
+ffmpeg
 pandas
 scikit-learn
 jupyter
