@@ -2,8 +2,10 @@ clip:
   length: 10
   overlap: 5
 
+extracted_path: data/extrcated/
+
 openface:
   ...
-  
+
 mediapipe:
   ...

@@ -14,7 +14,7 @@ Usage:
 import os
 import logging
 import argparse
-from utils.extractors import extract_features
+from utils.extraction import extract_features
 
 # Configure logging for easy tracking of script progress and issues
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')

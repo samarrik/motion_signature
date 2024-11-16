@@ -77,6 +77,73 @@ OF_NEEDED = [
 ]
 
 
+def extract_features(files: list, config_path: str):
+    """
+    Extract features from video files by processing each frame within defined intervals (logical clips).
+
+    Args:
+        files (list): List of video file paths.
+        config_path (str): Path to the configuration file.
+
+    Returns:
+        pd.DataFrame: DataFrame containing extracted features for each frame.
+    """
+
+    # Load configuration parameters
+    config = load_config(config_path)
+    clip_length = config["clip"]["length"]  # Length of each logical clip in seconds
+    clip_overlap = config["clip"]["overlap"]  # Overlap duration between clips in seconds
+
+    # Process each video file
+    for file in tqdm(files, desc="Processing video files", unit="files"):
+        features_extracted = []  # List to hold features from each video
+        
+        # Open the video file with OpenCV
+        vid = cv2.VideoCapture(file)
+        if not vid.isOpened():
+            logging.error(f"Cannot open video file {file}")
+            continue
+
+        # Get video properties
+        fps = vid.get(cv2.CAP_PROP_FPS)
+        vid_frame_num = int(vid.get(cv2.CAP_PROP_FRAME_COUNT))
+        vid_sec_num = vid_frame_num/fps
+
+        # Get clip properties
+        clip_frame_interval = int(fps * (clip_length - clip_overlap))  # Interval between frames to process
+        clip_frame_num = int(fps * (clip_length)) # Length of the clip in frames
+
+        # Setup crucial counters
+        start_frame_c, clip_index = 0, 0
+
+        # Continue processing the video until there are enough frames to create 4s clip
+        while (vid_frame_num-start_frame_c) / fps > 4:
+            clip_name = f"{os.path.splitext(os.path.basename(file))[0]}_c{clip_index}"
+
+            # Set the starting frame position
+            vid.set(cv2.CAP_PROP_POS_FRAMES, start_frame_c)
+            
+            # Process frames within the logical clip
+            for _ in range(clip_frame_num):
+                ret, frame = vid.read()
+                if not ret:
+                    break  # End of video reached
+
+                # Extract features from the frame (implement your logic here)
+                features = extract_frame_features(frame)
+                features_extracted.append(features)
+
+            # Update start frame for the next logical clip
+            start_frame_c += clip_frame_interval
+            clip_index += 1
+
+        vid.release()  # Release the video file
+
+        # Convert the list of features into a DataFrame
+        features_df = pd.DataFrame(features_extracted)
+        features_df.to_csv(f"{os.path.splitext(file)[0]}_features.csv", index=False)
+
+
 def correlation_extractor(clips_dataset_path: str) -> pd.DataFrame:
     
     EXTRACTED_OF = os.path.join("data", "extracted", "extracted_of")
