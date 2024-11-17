@@ -1,4 +1,3 @@
-
 import os
 import cv2
 import logging
@@ -8,6 +7,8 @@ import numpy as np
 import pandas as pd
 from itertools import combinations
 from . import normalizators
+from yaml import safe_load
+from tqdm import tqdm 
 
 MP_BODY_LANDMARKS_DIC = {
     0: "nose",
@@ -90,15 +91,14 @@ def extract_features(files: list, config_path: str):
     """
 
     # Load configuration parameters
-    config = load_config(config_path)
+    with open(config_path, 'r') as config_file:
+        config = safe_load(config_file)
     clip_length = config["clip"]["length"]  # Length of each logical clip in seconds
     clip_overlap = config["clip"]["overlap"]  # Overlap duration between clips in seconds
+    extractors = config["extractors"]
 
     # Process each video file
     for file in tqdm(files, desc="Processing video files", unit="files"):
-        features_extracted = []  # List to hold features from each video
-        
-        # Open the video file with OpenCV
         vid = cv2.VideoCapture(file)
         if not vid.isOpened():
             logging.error(f"Cannot open video file {file}")
@@ -107,41 +107,89 @@ def extract_features(files: list, config_path: str):
         # Get video properties
         fps = vid.get(cv2.CAP_PROP_FPS)
         vid_frame_num = int(vid.get(cv2.CAP_PROP_FRAME_COUNT))
-        vid_sec_num = vid_frame_num/fps
 
         # Get clip properties
-        clip_frame_interval = int(fps * (clip_length - clip_overlap))  # Interval between frames to process
-        clip_frame_num = int(fps * (clip_length)) # Length of the clip in frames
+        clip_frame_num = int(fps * clip_length)  # Length of the clip in frames
+        clip_frame_interval = int(fps * (clip_length - clip_overlap))  # Interval between clip starts
 
-        # Setup crucial counters
-        start_frame_c, clip_index = 0, 0
+        # Generate list of clip start frames
+        clip_starts = []
+        current_start_frame = 0
+        while current_start_frame + clip_frame_num // 3 < vid_frame_num: # Allow clips of smaller length up to 1/3 of the orig.
+            clip_starts.append(current_start_frame)
+            current_start_frame = min(current_start_frame + clip_frame_interval, vid_frame_num)
 
-        # Continue processing the video until there are enough frames to create 4s clip
-        while (vid_frame_num-start_frame_c) / fps > 4:
-            clip_name = f"{os.path.splitext(os.path.basename(file))[0]}_c{clip_index}"
+        active_clips = []
+        frame_number = 0
+        clip_idx = 0
 
-            # Set the starting frame position
-            vid.set(cv2.CAP_PROP_POS_FRAMES, start_frame_c)
-            
-            # Process frames within the logical clip
-            for _ in range(clip_frame_num):
-                ret, frame = vid.read()
-                if not ret:
-                    break  # End of video reached
+        # Read frames sequentially
+        while True:
+            ret, frame = vid.read()
+            if not ret:
+                break  # End of video reached
 
-                # Extract features from the frame (implement your logic here)
-                features = extract_frame_features(frame)
-                features_extracted.append(features)
+            # Check if a new clip should start at this frame
+            if frame_number in clip_starts:
+                clip_index = clip_starts.index(frame_number)
+                active_clips.append({
+                    'start_frame': frame_number,
+                    'frames': [],
+                    'idx': None
+                })
 
-            # Update start frame for the next logical clip
-            start_frame_c += clip_frame_interval
-            clip_index += 1
+            # Append the frame to all active clips
+            for clip in active_clips:
+                clip['frames'].append(frame)
+
+                # Check if the clip has reached the required length
+                if len(clip['frames']) == clip_frame_num:
+                    clip['idx'] = clip_idx; clip_idx += 1
+                    clip_name = f"{os.path.splitext(os.path.basename(file))[0]}_c{clip['clip_index']}"
+                    print(clip_name)
+
+                    # Extract features from the clip's frames
+                    features_extracted = [extract_frame_features(f, extractors) for f in clip['frames']]
+
+                    # Convert the list of features into a DataFrame and save it as CSV
+                    features_clip_df = pd.DataFrame(features_extracted)
+                    ## ADD to the condig !!!!!!!!!!!!!!!!!!!!!!!
+                    features_clip_df.to_csv(f"data/dataset_features/{clip_name}_features.csv", index=False)
+
+                    # Remove the clip from active clips
+                    active_clips.remove(clip)
+
+            frame_number += 1
 
         vid.release()  # Release the video file
 
-        # Convert the list of features into a DataFrame
-        features_df = pd.DataFrame(features_extracted)
-        features_df.to_csv(f"{os.path.splitext(file)[0]}_features.csv", index=False)
+def extract_frame_features(frame: np.array, extractors: list) -> dict:
+    extracted_features = dict()
+
+    # Extract features using OpenFace
+    extracted_features = extracted_features | ...
+    # Extract features using MEDIAPIPE
+    # Extrcat features using ...
+
+    return extracted_features
+
+def openface_extractor(frame: np.array) -> dict:
+    feature_list = ["-aus", "-pose"]
+    command = ['utils/OpenFace/build/bin/FeatureExtraction'] + feature_list
+
+    frame_path = "tmp_frame.jpg"
+    cv2.imwrite(frame_path, frame)
+    command += ['-f', frame_path]
+    subprocess.run(command, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    # Remove text file
+    # Load one-line csv into a dict
+    # Load one-line csv into a dict
+    csv_path = frame_path.replace(".jpg", ".csv")
+    with open(csv_path, mode='r') as file:
+        reader = csv.DictReader(file)
+        features = next(reader)
+    os.remove(csv_path)
+    return features
 
 
 def correlation_extractor(clips_dataset_path: str) -> pd.DataFrame:

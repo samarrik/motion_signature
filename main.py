@@ -46,10 +46,10 @@ if __name__ == "__main__":
     # Check if the videos can be opened
     for f in files:
         try:
-            with open(files, 'rb') as video_file:
+            with open(f, 'rb') as video_file:
                 pass
         except Exception as e:
-            raise PermissionError(f"Cannot open video file '{files}'")
+            raise PermissionError(f"Cannot open video file '{f}'")
 
     config = args.config
     if not os.path.isfile(config):
@@ -59,4 +59,4 @@ if __name__ == "__main__":
         raise PermissionError(f"The config file '{config}' is not accessible for reading.")
 
     # Convert each video to clips and extract features
-    extract_features(dataset, config)
+    extract_features(files, config)
