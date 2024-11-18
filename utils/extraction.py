@@ -184,26 +184,11 @@ def extract_features_clip(clip_path: str, extractors: list) -> pd.DataFrame:
     
     return pd.DataFrame(extracted_features)
 
-def pyfeat_extractor(frame: np.array) -> dict:
-    feature_list = ["-aus", "-pose"]
-    command = ['utils/OpenFace/build/bin/FeatureExtraction'] + feature_list
+def pyfeat_extractor(clip: str) -> pd.DataFrame:
+    ...
 
-    frame_path = "tmp_frame.jpg"
-    cv2.imwrite(frame_path, frame)
-    command += ['-f', frame_path]
-    subprocess.run(command, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    # Remove text file
-    # Load one-line csv into a dict
-    # Load one-line csv into a dict
-    csv_path = frame_path.replace(".jpg", ".csv")
-    with open(csv_path, mode='r') as file:
-        reader = csv.DictReader(file)
-        features = next(reader)
-    os.remove(csv_path)
-    return features
-
-def mediapipe_extractor(frame: np.array) -> dict:
-
+def mediapipe_extractor(clip: str) -> pd.DataFrame:
+    ...
 
 
 def correlation_extractor(clips_dataset_path: str) -> pd.DataFrame:
