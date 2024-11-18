@@ -95,10 +95,12 @@ def extract_features(files: list, config_path: str):
         config = safe_load(config_file)
     clip_length = config["clip"]["length"]  # Length of each logical clip in seconds
     clip_overlap = config["clip"]["overlap"]  # Overlap duration between clips in seconds
-    extractors = config["extractors"]
+    extractors = config["extractors"] # The list of extractors which will be used
+    extracted_path = config["extracted_path"] # The path to the extracted folder
 
     # Process each video file
     for file in tqdm(files, desc="Processing video files", unit="files"):
+        # Load the video and try to read from it
         vid = cv2.VideoCapture(file)
         if not vid.isOpened():
             logging.error(f"Cannot open video file {file}")
@@ -144,17 +146,22 @@ def extract_features(files: list, config_path: str):
 
                 # Check if the clip has reached the required length
                 if len(clip['frames']) == clip_frame_num:
+                    # Add a sequential number to a clip, cnt++
                     clip['idx'] = clip_idx; clip_idx += 1
                     clip_name = f"{os.path.splitext(os.path.basename(file))[0]}_c{clip['clip_index']}"
-                    print(clip_name)
+
+                    output_path = os.path.join(extracted_path, f"{clip_name}_tmp.mp4")
+                    fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # Codec for mp4
+                    out = cv2.VideoWriter(output_path, fourcc, fps, (frame.shape[1], frame.shape[0]))
+
+                    for frame in clip['frames']:
+                        out.write(frame) 
+                    out.release()
 
                     # Extract features from the clip's frames
-                    features_extracted = [extract_frame_features(f, extractors) for f in clip['frames']]
-
-                    # Convert the list of features into a DataFrame and save it as CSV
-                    features_clip_df = pd.DataFrame(features_extracted)
-                    ## ADD to the condig !!!!!!!!!!!!!!!!!!!!!!!
-                    features_clip_df.to_csv(f"data/dataset_features/{clip_name}_features.csv", index=False)
+                    features_extracted = extract_features_clip(output_path, extractors)
+                    extracted_features_path = os.path.join(extracted_path, f"{clip_name}_features.csv")
+                    features_clip_df.to_csv(extracted_features_path, index=False)
 
                     # Remove the clip from active clips
                     active_clips.remove(clip)
@@ -163,17 +170,21 @@ def extract_features(files: list, config_path: str):
 
         vid.release()  # Release the video file
 
-def extract_frame_features(frame: np.array, extractors: list) -> dict:
-    extracted_features = dict()
+def extract_features_clip(clip_path: str, extractors: list) -> pd.DataFrame:
+    extracted_features = pd.DataFrame()
 
-    # Extract features using OpenFace
-    extracted_features = extracted_features | ...
+    # Extract features using Py-Feat
+    if "pyfeat" in extractors:
+        extracted_features = pd.concat([extracted_features, pyfeat_extractor(clip_path)], axis=1)
     # Extract features using MEDIAPIPE
+    if "mediapipe" in extractors:
+        extracted_features = pd.concat([extracted_features, mediapipe_extractor(clip_path)], axis=1)
     # Extrcat features using ...
+    # if ... in extractors:
+    
+    return pd.DataFrame(extracted_features)
 
-    return extracted_features
-
-def openface_extractor(frame: np.array) -> dict:
+def pyfeat_extractor(frame: np.array) -> dict:
     feature_list = ["-aus", "-pose"]
     command = ['utils/OpenFace/build/bin/FeatureExtraction'] + feature_list
 
@@ -190,6 +201,9 @@ def openface_extractor(frame: np.array) -> dict:
         features = next(reader)
     os.remove(csv_path)
     return features
+
+def mediapipe_extractor(frame: np.array) -> dict:
+
 
 
 def correlation_extractor(clips_dataset_path: str) -> pd.DataFrame:

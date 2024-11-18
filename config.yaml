@@ -1,11 +1,20 @@
+# Features of clips
 clip:
   length: 10
   overlap: 5
 
-extracted_path: data/extrcated/
+# Path to the folder where all extracted data is stored
+extracted_path: data/extracted/
 
-openface:
+# Extractors used in this particular cofiguration
+extractors:
+  - pyfeat
+  - mediapipe
+
+# Pyfeat configuration
+pyfeat:
   ...
 
+# Mediapipe configuration
 mediapipe:
   ...
