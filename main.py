@@ -20,7 +20,7 @@ from utils.extraction import extract_features
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def parse_arguments():
-    """
+    """ 
     Parse command-line arguments to get the dataset path.
     Returns:
         argparse.Namespace: Parsed arguments with dataset path.
@@ -43,20 +43,11 @@ if __name__ == "__main__":
     # Check if all files have valid extensions
     if not all(f.lower().endswith(valid_extensions) for f in files):
         raise ValueError(f"The dataset directory '{dataset}' must contain only video files.")
-    # Check if the videos can be opened
-    for f in files:
-        try:
-            with open(f, 'rb') as video_file:
-                pass
-        except Exception as e:
-            raise PermissionError(f"Cannot open video file '{f}'")
 
+    # Check the config file
     config = args.config
     if not os.path.isfile(config):
         raise FileNotFoundError(f"The config file '{args.config}' does not exist.")
-    # Check if the config file is accessible
-    if not os.access(config, os.R_OK):
-        raise PermissionError(f"The config file '{config}' is not accessible for reading.")
 
     # Convert each video to clips and extract features
     extract_features(files, config)

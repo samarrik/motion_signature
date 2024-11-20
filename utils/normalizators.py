@@ -51,5 +51,52 @@ def normalize_landmarks(landmarks: dict) -> (bool, dict):
     else:
         return (False, original_landmarks)
 
+import pandas as pd
+
+def normalize_landmarks_df(landmarks_df: pd.DataFrame) -> (bool, pd.DataFrame):
+    valid_landmarks = True
+    original_landmarks = landmarks_df.copy()
+
+    # Normalize individual landmarks for each row
+    for index, row in landmarks_df.iterrows():
+        # Prevent from even starting the analysis if some necessary elements are not present
+        if (row["leftShoulder"] == 0 or row["rightShoulder"] == 0 or row["leftEye"] == 0):
+            logging.info(f"Cannot normalize the frame at index {index}, crucial landmarks are missing")
+            valid_landmarks = False
+            continue  # Skip to the next row
+
+        left_shoulder = (row["leftShoulder"], row["leftShoulder"])
+        right_shoulder = (row["rightShoulder"], row["rightShoulder"])
+
+        # Calculation of the estimation of the head metric
+        shoulder_distance = ((((left_shoulder[0] - right_shoulder[0]) ** 2) + (
+                (left_shoulder[1] - right_shoulder[1]) ** 2)) ** 0.5)
+        head_metric = shoulder_distance / 2
+
+        # Set the starting and ending point of the normalization bounding box
+        starting_point = [row["leftShoulder"] - 2 * head_metric,
+                          row["leftEye"] + head_metric]
+        ending_point = [row["rightShoulder"] + 2 * head_metric, starting_point[1] - 6 * head_metric]
+
+        # Normalize individual landmarks for the current row
+        for key in landmarks_df.columns:
+            # Prevent from trying to normalize incorrectly captured points
+            if row[key] == (0, 0):
+                continue
+
+            if (ending_point[0] - starting_point[0]) == 0 or (starting_point[1] - ending_point[1]) == 0:
+                logging.info(f"Problematic normalization at index {index}")
+                valid_landmarks = False
+                break
+            
+            landmark_norm_x = (row[key] - starting_point[0]) / (ending_point[0] - starting_point[0])
+            landmark_norm_y = (row[key] - starting_point[1]) / (ending_point[1] - starting_point[1])
+            landmarks_df.at[index, key] = (landmark_norm_x, landmark_norm_y)
+
+    if valid_landmarks:
+        return (True, landmarks_df)
+    else:
+        return (False, original_landmarks)
+
 if __name__ == "__main__":
     pass

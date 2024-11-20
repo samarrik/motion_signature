@@ -13,33 +13,15 @@ sudo apt update && sudo apt upgrade -y
 sudo apt install -y python3.9 python3.9-venv python3.9-dev
 
 echo "Setting up Python virtual environment with Python 3.9"
-python3.9 -m venv venv_df
-source venv_df/bin/activate
+python3.9 -m venv venv_ms
+source venv_ms/bin/activate
 pip install --upgrade pip
 
 echo "Installing Python requirements"
 pip install -qr requirements.txt
 
-echo "Downloading required models"
-mkdir -p .data/models/mediapipe
-sudo wget -O .data/models/mediapipe/pose_landmarker.task -q https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_heavy/float16/1/pose_landmarker_heavy.task   
+# echo "Downloading required models"
+# mkdir -p .data/models/mediapipe
+# sudo wget -O .data/models/mediapipe/pose_landmarker.task -q https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_heavy/float16/1/pose_landmarker_heavy.task   
 
-echo "Installing OpenFace"
-sudo add-apt-repository ppa:kisak/kisak-mesa
-sudo apt update && sudo apt upgrade -y
-sudo apt install -y \
-  build-essential \
-  cmake \
-  wget \
-  libopenblas-dev \
-  libopencv-dev \
-  libdlib-dev \
-  libboost-all-dev \
-  libsqlite3-dev
-wget -O install_openface.py https://raw.githubusercontent.com/GuillaumeRochette/OpenFace/master/install.py
-mkdir utils
-sed -i 's|DEFAULT_INSTALL_PATH = Path(os.environ\["HOME"\]) / "OpenFace"|DEFAULT_INSTALL_PATH = Path(os.getcwd()) / "utils/OpenFace"|g' install_openface.py
-python install_openface.py
-sudo rm install_openface.py
-
-echo "Everything is ready, run extract.py"
+echo "Everything is ready, run main.py"

@@ -5,3 +5,4 @@ scikit-learn
 jupyter
 matplotlib
 seaborn
+py-feat

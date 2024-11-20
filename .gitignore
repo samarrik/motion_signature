@@ -4,8 +4,7 @@ data/*
 
 utils/OpenFace
 
-venv_zel/
-venv_df/
+venv_ms/
 
 # Ignore garbage py files and folders
 __pycache__/
