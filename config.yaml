@@ -24,6 +24,7 @@ extractors_features:
       - rightElbow
       - leftWrist
       - rightWrist
+      - leftEye
     all:
       - nose
       - leftEyeInner

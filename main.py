@@ -17,7 +17,9 @@ import argparse
 from utils.extraction import extract_features
 
 # Configure logging for easy tracking of script progress and issues
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+# logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+# logging.getLogger('pyfeat').setLevel(logging.WARNING)
+logging.getLogger('pyfeat').disabled = True
 
 def parse_arguments():
     """ 
@@ -48,6 +50,9 @@ if __name__ == "__main__":
     config = args.config
     if not os.path.isfile(config):
         raise FileNotFoundError(f"The config file '{args.config}' does not exist.")
+
+    logging.info(f"Dataset '{dataset}' has been checked and is valid.")
+    logging.info("Starting the extraction process...")
 
     # Convert each video to clips and extract features
     extract_features(files, config, correlations=True)

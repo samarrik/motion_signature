@@ -1,3 +1,4 @@
+
 import os
 import cv2
 import logging
@@ -6,7 +7,7 @@ import pandas as pd
 from itertools import combinations
 from yaml import safe_load
 from tqdm import tqdm
-from feat import Detector
+from feat.detector import Detector
 from . import normalizators
 
 
@@ -41,7 +42,14 @@ def extract_features(files: list, config_path: str, correlations: bool = True):
     extractors_objects = {}
     for extractor in extractors:
         if extractor == "pyfeat":
-            extractors_objects["pyfeat"] = Detector(device='cuda')  # Careful with batch_size > 1, limited by VRAM
+            extractors_objects["pyfeat"] = Detector(
+                                landmark_model="mobilefacenet",  
+                                au_model="xgb",                 
+                                emotion_model='svm',             
+                                identity_model="facenet",       
+                                device="cuda",
+                                batch_size = 10,                 
+                            )
         elif extractor == "mediapipe":
             extractors_objects["mediapipe"] = mp.solutions.pose.Pose(
                 static_image_mode=False,
@@ -51,7 +59,7 @@ def extract_features(files: list, config_path: str, correlations: bool = True):
                 min_tracking_confidence=0.5)
         # Add other extractors here if needed
 
-    extractors_features = config["features"]
+    extractors_features = config["extractors_features"]
 
     # DataFrame to store correlations if requested
     correlations_df = pd.DataFrame() if correlations else None
@@ -132,7 +140,7 @@ def extract_features(files: list, config_path: str, correlations: bool = True):
                             correlations_dict[f"{feature_1}*{feature_2}"] = correlation_value
 
                         # Insert correlations for the video
-                        correlations_df = correlations_df.append(pd.Series(correlations_dict, name=clip_name))
+                        correlations_df = pd.concat([correlations_df, pd.Series(correlations_dict, name=clip_name)], axis=1)
 
                     # Remove the clip from active clips
                     active_clips.remove(clip)
@@ -214,7 +222,9 @@ def pyfeat_extractor(clip_path: str, extractor: Detector) -> pd.DataFrame:
     Returns:
         pd.DataFrame: DataFrame containing extracted features.
     """
-    return extractor.detect(clip_path, data_type="video", face_detection_threshold=0.8)
+
+    # video_tensor = video_to_tensor(clip_path)
+    return extractor.detect_video(clip_path, data_type="tensor", face_detection_threshold=0.8, batch_size=3)
 
 
 def mediapipe_extractor(clip_path: str, extractor: mp.solutions.pose.Pose, features: list) -> pd.DataFrame:
