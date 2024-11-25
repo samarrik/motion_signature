@@ -50,4 +50,4 @@ if __name__ == "__main__":
         raise FileNotFoundError(f"The config file '{args.config}' does not exist.")
 
     # Convert each video to clips and extract features
-    extract_features(files, config)
+    extract_features(files, config, correlations=True)

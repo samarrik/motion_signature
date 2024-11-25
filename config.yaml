@@ -6,6 +6,9 @@ clip:
 # Path to the folder where all extracted data is stored
 extracted_path: data/extracted/
 
+# Path to the file where a file with all computer correlations will be stored
+correlations_path: data/correlations.csv
+
 # Extractors used in this particular cofiguration
 extractors:
   - pyfeat

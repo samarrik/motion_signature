@@ -11,30 +11,8 @@ from yaml import safe_load
 from tqdm import tqdm 
 from feat import Detector
 
-OF_NEEDED = [
-    "AU01_r",
-    "AU02_r",
-    "AU04_r",
-    "AU05_r",
-    "AU06_r",
-    "AU07_r",
-    "AU09_r",
-    "AU10_r",
-    "AU12_r",
-    "AU14_r",
-    "AU15_r",
-    "AU17_r",
-    "AU20_r",
-    "AU23_r",
-    "AU25_r",
-    "AU26_r",
-    "pose_Rx",
-    "pose_Rz"
-    # mouthH(x_54-x_48), mouthV(x_51-x_57) have to be normalised, but author does not mention it, so I skip them
-]
 
-
-def extract_features(files: list, config_path: str):
+def extract_features(files: list, config_path: str, correlations: bool = True):
     """
     Extract features from video files by processing each frame within defined intervals (logical clips).
 
@@ -54,6 +32,14 @@ def extract_features(files: list, config_path: str):
     clip_length = config["clip"]["length"]
     clip_overlap = config["clip"]["overlap"]
 
+    # Whewre to save extracted
+    extracted_path = config["extracted_path"]
+    
+    # If correlations are requested, get the place where they can be stored
+    correlations_path = None
+    if correlations:
+        correlations_path = config["correlations_path"]
+
     # Load and setup all the extractors requested
     extractors = config["extractors"] # The list of extractors which will be used
     extractors_objects = {}
@@ -72,6 +58,11 @@ def extract_features(files: list, config_path: str):
         # elif extractor is "...":
         #     extractors_objects["..."] = ...
     extractors_features = config["features"]
+
+    # If correlations are requested, get the df where they can be stored
+    correlations_df = None
+    if correlations:
+        correlations_df = pd.DataFrame()
 
     # Process each video file
     for file in tqdm(files, desc="Processing video files", unit="files"):
@@ -138,12 +129,29 @@ def extract_features(files: list, config_path: str):
                     extracted_features_path = os.path.join(extracted_path, f"{clip_name}_features.csv")
                     features_clip_df.to_csv(extracted_features_path, index=False)
 
+                    # Compute correlation and add them to the df
+                    correlations_matrix = features_extracted.corr()
+
+                    # Select required correlations
+                    correlations_dict = {}
+                    for feature_1, feature_2 in combinations(df_combined.columns, 2):
+                        correlation_value = correlations.loc[feature_1, feature_2]
+                        correlations_dict[f"{feature_1}*{feature_2}"] = correlation_value
+
+                    # Insert correlations for the video
+                    correlations_df[clip_name] = pd.Series(correlations_dict)
+                    
                     # Remove the clip from active clips
                     active_clips.remove(clip)
 
             frame_number += 1
 
         vid.release()  # Release the video file
+
+    # If correlations are requested, export them
+    if correlations:
+        correlations_df = correlations_df.T
+        correlations_df.to_csv(correlations_path, index=False)
 
 def extract_features_clip(clip_path: str, extractors_objects: list, extractors_features: list) -> pd.DataFrame:
     extracted_features = pd.DataFrame()
@@ -167,28 +175,16 @@ def extract_features_clip(clip_path: str, extractors_objects: list, extractors_f
         used_features = extractors_features["mediapipe"]["used"]
         mp_extracted_df = mp_extracted_df[used_features]
 
-        # Normalise the features
-        if results.pose_landmarks:
-            landmarks = {
-                MP_BODY_LANDMARKS_DIC[id_l]: (landmark.x, landmark.y) for id_l, landmark in enumerate(results.pose_landmarks.landmark)
-                }
+        # Perform normalisation for the whole df
+        mp_extracted_normalised_df = normalize_landmarks_df(mp_extracted_df)
 
-            # Normalize pose landmarks
-            success, normalized_landmarks = normalizators.normalize_landmarks(landmarks)
+        # Separate X and Y in the coordiantes
+        for column in mp_extracted_normalised_df.columns:
+            if isinstance(mp_extracted_normalised_df[column].iloc[0], tuple):
+                mp_extracted_normalised_df[f"{column}_X"] = mp_extracted_normalised_df[column].apply(lambda coord: coord[0] if coord is not None else None)
+                mp_extracted_normalised_df[f"{column}_Y"] = mp_extracted_normalised_df[column].apply(lambda coord: coord[1] if coord is not None else None)
+                mp_extracted_normalised_df.drop(column, axis=1, inplace=True)  # Delete the initial column
 
-            if not success:
-                landmarks_with_axes = {
-                    f"{key}_{axis}": np.nan for key in MP_BODY_LANDMARKS_DIC.values() for axis in ['X', 'Y']
-                    }
-            else:
-                landmarks_with_axes = {
-                    f"{key}_{axis}": value for key, (x, y) in normalized_landmarks.items() for axis, value in zip(['X', 'Y'], [x, y])
-                    }
-        else:
-            # No pose landmarks detected, add NaNs
-            landmarks_with_axes = {
-                f"{key}_{axis}": np.nan for key in MP_BODY_LANDMARKS_DIC.values() for axis in ['X', 'Y']
-                }
         # Concatenating the final df
         extracted_features = pd.concat([extracted_features,], axis=1)
     # Extract features using ...
@@ -216,172 +212,13 @@ def mediapipe_extractor(clip_path: str, extractor: mp.pose, features: list) -> p
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
         results = mp_pose.process(frame_rgb)
-        landmarks = {features[idx]: landmark for idx, landmark in enumerate(results.pose_landmarks.landmark)}
+        landmarks = {features[idx]: landmark for idx, landmark in enumerate(results.pose_landmarks.landmark)} if results.pose_landmarks else {feature: None for feature in features}
         landmarks_list.append(landmarks)
 
     vidObj.release()
 
     # Create DataFrame from list
     return pd.DataFrame(landmarks_list)
-
-
-# def correlation_extractor(clips_dataset_path: str) -> pd.DataFrame:
-    
-#     EXTRACTED_OF = os.path.join("data", "extracted", "extracted_of")
-#     EXTRACTED_MP = os.path.join("data", "extracted", "extracted_mp")
-#     CORRELATIONS = os.path.join("data", "correlations.csv")
-
-#     os.makedirs(EXTRACTED_OF, exist_ok=True)
-#     os.makedirs(EXTRACTED_MP, exist_ok=True)
-
-#     # Collect all the paths to the clips
-#     clip_paths = []
-#     for root, _, files in os.walk(clips_dataset_path):
-#         for file in files:
-#             if file.lower().endswith((".mp4", ".avi", ".mov")):
-#                 clip_paths.append(os.path.join(root, file))
-
-#     if not clip_paths:
-#         logging.error("No video files found in the dataset.")
-#         return
-    
-#     else:
-#         logging.info(f"Found {len(clip_paths)} video clip(s) to process.")
-        
-#     if not os.path.exists(EXTRACTED_OF):
-#         # Run OpenFace extractor on all of the clips
-#         feature_list = ["-aus", "-pose"]
-#         command = ['utils/OpenFace/build/bin/FeatureExtraction'] + feature_list
-#         for clip_path in clip_paths:
-#             command += ['-f', clip_path]
-#         command += ["-out_dir", EXTRACTED_OF]
-
-#         logging.info("Running OpenFace FeatureExtraction.")
-#         try:
-#             subprocess.run(command, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-
-#         except subprocess.CalledProcessError as e:
-#             logging.error(f"OpenFace FeatureExtraction failed: {e}")
-#             return 
-
-#         # Remove all generated info files
-#         for root, _, files in os.walk(EXTRACTED_OF):
-#             for file in files:
-#                 if file.endswith(".txt"):
-#                     os.remove(os.path.join(root, file))
-#                     logging.info(f"Removed text file: {file} from {EXTRACTED_OF}")
-
-
-
-#     if not os.path.exists(EXTRACTED_MP):
-#         # Initialize MediaPipe Pose estimator
-#         mp_pose = mp.solutions.pose.Pose(
-#             static_image_mode=False,
-#             model_complexity=1,
-#             enable_segmentation=False,
-#             min_detection_confidence=0.5,
-#             min_tracking_confidence=0.5)
-
-#         # Run MediaPipe extractor on all of the clips
-#         logging.info("Running MediaPipe landmark extraction.")
-#         for clip_path in clip_paths:
-#             clip_name = os.path.splitext(os.path.basename(clip_path))[0]
-#             vidObj = cv2.VideoCapture(clip_path)
-
-#             if not vidObj.isOpened():
-#                 logging.warning(f"Cannot open video file {clip_path}")
-#                 continue
-
-#             landmarks_list = []
-#             while True:
-#                 ret, frame = vidObj.read()
-#                 if not ret:
-#                     break
-
-#                 # Convert frame to RGB format as required by MediaPipe
-#                 frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-#                 results = mp_pose.process(frame_rgb)
-
-#                 if results.pose_landmarks:
-#                     landmarks = {
-#                         MP_BODY_LANDMARKS_DIC[id_l]: (landmark.x, landmark.y) for id_l, landmark in enumerate(results.pose_landmarks.landmark)
-#                         }
-
-#                     # Normalize pose landmarks
-#                     success, normalized_landmarks = normalizators.normalize_landmarks(landmarks)
-
-#                     if not success:
-#                         landmarks_with_axes = {
-#                             f"{key}_{axis}": np.nan for key in MP_BODY_LANDMARKS_DIC.values() for axis in ['X', 'Y']
-#                             }
-#                     else:
-#                         landmarks_with_axes = {
-#                             f"{key}_{axis}": value for key, (x, y) in normalized_landmarks.items() for axis, value in zip(['X', 'Y'], [x, y])
-#                             }
-#                 else:
-#                     # No pose landmarks detected, add NaNs
-#                     landmarks_with_axes = {
-#                         f"{key}_{axis}": np.nan for key in MP_BODY_LANDMARKS_DIC.values() for axis in ['X', 'Y']
-#                         }
-
-#                 landmarks_list.append(landmarks_with_axes)
-
-#             vidObj.release()
-
-#             # Create DataFrame from list
-#             df_landmarks = pd.DataFrame(landmarks_list)
-
-#             # Export the data
-#             extracted_path = os.path.join(EXTRACTED_MP, f"{clip_name}.csv")
-#             df_landmarks.to_csv(extracted_path, index=False)
-
-#     # Compute correlations
-#     df_correlations = pd.DataFrame()
-
-#     for clip_path in clip_paths:
-#         clip_name = os.path.splitext(os.path.basename(clip_path))[0]
-#         logging.info(f"Computing correlations for clip: {clip_name}")
-
-#         try:
-#             # Load the data extracted using both OpenFace and MediaPipe
-#             df_of_path = os.path.join(EXTRACTED_OF, f"{clip_name}.csv")
-#             df_mp_path = os.path.join(EXTRACTED_MP, f"{clip_name}.csv")
-
-#             if not os.path.exists(df_of_path) or not os.path.exists(df_mp_path):
-#                 logging.warning(f"Extracted data files for clip {clip_name} are missing. Skipping.")
-#                 continue
-
-#             df_of = pd.read_csv(df_of_path)
-#             df_mp = pd.read_csv(df_mp_path)
-
-#             df_combined = pd.concat([df_of, df_mp], axis=1)
-
-#             # Drop all the columns which are neither in MP_NEEDED nor in OF_NEEDED
-#             columns_to_keep = [f"{key}_X" for key in MP_NEEDED] + [f"{key}_Y" for key in MP_NEEDED] + OF_NEEDED
-#             df_combined = df_combined[columns_to_keep]
-
-#             correlations = df_combined.corr()
-
-#             correlations_dict = {}
-#             for feature_1, feature_2 in combinations(df_combined.columns, 2):
-#                 correlation_value = correlations.loc[feature_1, feature_2]
-#                 correlations_dict[f"{feature_1}*{feature_2}"] = correlation_value
-
-#             df_correlations[clip_name] = pd.Series(correlations_dict)
-
-#         except Exception as e:
-#             logging.error(f"Failed to compute correlations for clip {clip_name}: {e}")
-#             continue
-
-#     # Transpose the df to make each clip a row, not a column
-#     df_correlations = df_correlations.T
-
-#     # Save the correlations into a CSV file
-#     try:
-#         df_correlations.to_csv(CORRELATIONS, index_label='clip_name')
-#         logging.info("Saved correlations to correlations.csv")
-#     except Exception as e:
-#         logging.error(f"Failed to save correlations to file: {e}")
 
 if __name__ == "__main__":
     pass
