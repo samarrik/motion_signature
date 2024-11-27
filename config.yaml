@@ -80,4 +80,4 @@ extractors_features:
       - Int_au_14
       - Int_au_17
     all:
-      # Too much
+      # Too much, but can also yield normalized facial landmarks
