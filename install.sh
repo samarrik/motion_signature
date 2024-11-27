@@ -7,9 +7,11 @@ if [[ "$installation_done" != "y" && "$installation_done" != "Y" ]]; then
     exit 1
 fi
 
-echo "Installing Python 3.9 locally using pyenv"
+echo "Installing Python 3.9 locally using pyenv..."
 if ! command -v pyenv &>/dev/null; then
-    curl https://pyenv.run | bash
+    echo "Downloading and installing pyenv..."
+    wget -O pyenv-installer https://pyenv.run
+    bash pyenv-installer
     export PATH="$HOME/.pyenv/bin:$PATH"
     eval "$(pyenv init --path)"
     eval "$(pyenv virtualenv-init -)"
