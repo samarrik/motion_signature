@@ -17,10 +17,18 @@ python3.9 -m venv venv_ms
 source venv_ms/bin/activate
 pip install --upgrade pip
 
+echo "Insatlling cmake"
+sudo apt install cmake
+
+echo "Make sure the compiler supports C++11"
+sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+sudo apt install g++-11
+
 echo "Installing Python requirements"
 pip install -qr requirements.txt
 
-# echo "Downloading required models"
+echo "Downloading required models"
+download_models
 # mkdir -p .data/models/mediapipe
 # sudo wget -O .data/models/mediapipe/pose_landmarker.task -q https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_heavy/float16/1/pose_landmarker_heavy.task   
 

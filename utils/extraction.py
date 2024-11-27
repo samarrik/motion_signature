@@ -7,9 +7,11 @@ import pandas as pd
 from itertools import combinations
 from yaml import safe_load
 from tqdm import tqdm
-from feat.detector import Detector
+from PyAFAR_GUI.adult_afar import adult_afar
 from . import normalizators
 
+# Set up logging
+logger  = logging.getLogger("extraction")
 
 def extract_features(files: list, config_path: str, correlations: bool = True):
     """
@@ -23,33 +25,30 @@ def extract_features(files: list, config_path: str, correlations: bool = True):
     Returns:
         None
     """
-    # Load configuration parameters
+
+    logger.info("Loading the configuration for extraction.")
+    # Load configuration parameters 
     with open(config_path, 'r') as config_file:
         config = safe_load(config_file)
 
-    # Load clip configurations
+    # Load the configurations which define how clips are being yielded
     clip_length = config["clip"]["length"]
     clip_overlap = config["clip"]["overlap"]
 
-    # Where to save extracted features
-    extracted_path = config["extracted_path"]
+    # Load the names of all the extractors requested
+    extractors = config["extractors"]
 
-    # If correlations are requested, get the path where they can be stored
-    correlations_path = config.get("correlations_path") if correlations else None
-
-    # Load and set up all the extractors requested
-    extractors = config["extractors"]  # The list of extractors to be used
+    # Configer the extractors themselves
     extractors_objects = {}
     for extractor in extractors:
-        if extractor == "pyfeat":
-            extractors_objects["pyfeat"] = Detector(
-                                landmark_model="mobilefacenet",  
-                                au_model="xgb",                 
-                                emotion_model='svm',             
-                                identity_model="facenet",       
-                                device="cuda",
-                                batch_size = 10,                 
-                            )
+        if extractor == "pyafar":
+            extractors_objects["pyafar"] = { 
+                'AUs':["au_1", "au_2","au_4", "au_6","au_7", "au_10","au_12", "au_14","au_15", "au_17","au_23", "au_24"], 
+                'GPU': True, 
+                'max_frames': 1000, 
+                'AU_Int': ["au_6", "au_10","au_12", "au_14","au_17"], 
+                'batch_size': 100, 
+                'PID': False}
         elif extractor == "mediapipe":
             extractors_objects["mediapipe"] = mp.solutions.pose.Pose(
                 static_image_mode=False,
@@ -59,12 +58,17 @@ def extract_features(files: list, config_path: str, correlations: bool = True):
                 min_tracking_confidence=0.5)
         # Add other extractors here if needed
 
+    # Load and  all the features of the requested extractors
     extractors_features = config["extractors_features"]
+
+    # Define the path where the raw extrcated data wil be saved
+    extracted_path = config['extracted_path']
+    correlations_path = config['correlations_path']
 
     # DataFrame to store correlations if requested
     correlations_df = pd.DataFrame() if correlations else None
 
-    # Process each video file
+    # Process video files
     for file in tqdm(files, desc="Processing video files", unit="files"):
         # Load the video and try to read from it
         vid = cv2.VideoCapture(file)
@@ -129,6 +133,9 @@ def extract_features(files: list, config_path: str, correlations: bool = True):
                     extracted_features_path = os.path.join(extracted_path, f"{clip_name}_features.csv")
                     features_extracted.to_csv(extracted_features_path, index=False)
 
+                    # Remove the processed vid
+                    os.remove(output_path)
+
                     # Compute correlation and add them to the DataFrame if requested
                     if correlations:
                         correlations_matrix = features_extracted.corr()
@@ -154,6 +161,7 @@ def extract_features(files: list, config_path: str, correlations: bool = True):
         correlations_df.to_csv(correlations_path, index=True)
 
 
+
 def extract_features_clip(clip_path: str, extractors_objects: dict, extractors_features: dict) -> pd.DataFrame:
     """
     Extract features from a video clip using specified extractors.
@@ -168,12 +176,15 @@ def extract_features_clip(clip_path: str, extractors_objects: dict, extractors_f
     """
     extracted_features = pd.DataFrame()
 
-    # Extract features using Py-Feat
-    if "pyfeat" in extractors_objects:
-        pf_extracted_df = pyfeat_extractor(clip_path, extractors_objects["pyfeat"])
+    # Extract features using pyAFAR
+    if "pyafar" in extractors_objects:
+        pf_extracted_df = pyafar_extractor(
+            clip_path, 
+            extractors_objects["pyafar"], 
+            None,)
 
-        # Specific to py-feat data preprocessing
-        used_features = extractors_features["pyfeat"]["used"]
+        # Specific to pyAFAR data preprocessing
+        used_features = extractors_features["pyafar"]["used"]
         pf_extracted_df = pf_extracted_df[used_features]
 
         # Concatenate to the final DataFrame
@@ -205,27 +216,33 @@ def extract_features_clip(clip_path: str, extractors_objects: dict, extractors_f
 
         # Concatenate to the final DataFrame
         extracted_features = pd.concat([extracted_features, mp_extracted_normalized_df], axis=1)
-
     # Add other extractors here if needed
 
     return extracted_features
 
 
-def pyfeat_extractor(clip_path: str, extractor: Detector) -> pd.DataFrame:
+def pyafar_extractor(file: str, extractor: dict, features: None = None) -> pd.DataFrame:
     """
-    Extract features using Py-Feat.
+    Extract features using pyAFAR.
 
     Args:
-        clip_path (str): Path to the video clip.
-        extractor (Detector): Initialized Py-Feat detector.
-
+        file (str): Path to the video file.
+        extractor (None): is not used
+        features (None): is not used
     Returns:
-        pd.DataFrame: DataFrame containing extracted features.
+        pd.DataFrame: DataFrame containing extracted features with frame numbers.
     """
-
-    # video_tensor = video_to_tensor(clip_path)
-    return extractor.detect_video(clip_path, data_type="tensor", face_detection_threshold=0.8, batch_size=3)
-
+    # Process the entire video
+    result = adult_afar(
+        filename=file,  
+        AUs=extractor['AUs'], 
+        GPU=extractor['GPU'], 
+        max_frames=extractor['max_frames'], 
+        AU_Int=extractor['AU_Int'], 
+        batch_size=extractor['batch_size'], 
+        PID=extractor['PID'])
+    df = pd.DataFrame.from_dict(result)
+    return df
 
 def mediapipe_extractor(clip_path: str, extractor: mp.solutions.pose.Pose, features: list) -> pd.DataFrame:
     """
@@ -265,7 +282,6 @@ def mediapipe_extractor(clip_path: str, extractor: mp.solutions.pose.Pose, featu
 
     # Create DataFrame from list
     return pd.DataFrame(landmarks_list)
-
 
 if __name__ == "__main__":
     pass

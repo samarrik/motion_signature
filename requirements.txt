@@ -5,4 +5,6 @@ scikit-learn
 jupyter
 matplotlib
 seaborn
-py-feat
+dlib
+https://github.com/AffectAnalysisGroup/PyAFAR/releases/download/v3.0.0/PyAFAR_GPU-3.0-py3-none-any.whl 
+tensorrt
