@@ -23,7 +23,6 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger("main")  # Create a logger for this module
-# logging.getLogger('feat').disabled = True
 
 def parse_arguments():
     """
