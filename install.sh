@@ -2,37 +2,46 @@
 
 echo "Please install NVIDIA drivers, CUDA, and WSL2 using the instructions from the official NVIDIA website."
 read -p "Have you completed the installation? (y/n): " installation_done
-if [[ "$installation_done" != "y" && "$installation_done" != "Y" && "$installation_done" != "yes" && "$installation_done" != "Yes" && "$installation_done" != "yea" && "$installation_done" != "yeah" && "$installation_done" != "YES" ]]; then
+if [[ "$installation_done" != "y" && "$installation_done" != "Y" && "$installation_done" != "yes" && "$installation_done" != "Yes" ]]; then
     echo "Please complete the installation before proceeding."
     exit 1
 fi
 
-echo "Installing Python 3.9 using pyenv"
-if ! command -v pyenv &>/dev/null; then
-    echo "pyenv is not installed. Installing pyenv locally."
-    curl https://pyenv.run | bash
-    export PATH="$HOME/.pyenv/bin:$PATH"
-    eval "$(pyenv init --path)"
-    eval "$(pyenv virtualenv-init -)"
+echo "Checking for Python 3.9 installation..."
+if ! command -v python3.9 &>/dev/null; then
+    echo "Python 3.9 is not available. Installing Python 3.9 locally."
+    mkdir -p $HOME/python-install
+    cd $HOME/python-install
+    wget https://www.python.org/ftp/python/3.9.18/Python-3.9.18.tgz
+    tar -xzf Python-3.9.18.tgz
+    cd Python-3.9.18
+    ./configure --prefix=$HOME/python-3.9 --enable-optimizations
+    make -j$(nproc)
+    make install
+    export PATH="$HOME/python-3.9/bin:$PATH"
+    cd -
+else
+    echo "Python 3.9 is already installed."
 fi
-
-export PATH="$HOME/.pyenv/bin:$PATH"
-eval "$(pyenv init --path)"
-eval "$(pyenv virtualenv-init -)"
-
-if ! pyenv versions | grep -q "3.9"; then
-    echo "Python 3.9 is not installed. Installing it using pyenv."
-    pyenv install 3.9.18
-fi
-
-pyenv local 3.9.18
 
 echo "Setting up Python virtual environment with Python 3.9"
+if ! command -v python3.9 &>/dev/null; then
+    echo "Error: Python 3.9 installation failed or is not in PATH."
+    exit 1
+fi
+
 python3.9 -m venv venv_ms
+if [[ ! -d "venv_ms" ]]; then
+    echo "Virtual environment creation failed."
+    exit 1
+fi
 source venv_ms/bin/activate
-pip install --upgrade pip
 
 echo "Installing Python requirements"
+if [[ ! -f "requirements.txt" ]]; then
+    echo "requirements.txt file not found. Please provide a valid file."
+    exit 1
+fi
 pip install -r requirements.txt
 
 echo "Downloading required models"
