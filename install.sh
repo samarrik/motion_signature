@@ -28,6 +28,7 @@ if [[ ! -d "$PYTHON_DIR" ]]; then
 else
     echo "Python 3.9 is already installed locally."
 fi
+export PATH="$PYTHON_DIR/bin:$PATH"
 
 echo "Setting up Python virtual environment with Python 3.9"
 python3.9 -m venv venv_ms
@@ -47,9 +48,11 @@ else
     export PATH="$CMAKE_DIR/bin:$PATH"
 fi
 
+echo "Verifying CMake installation"
+cmake --version || { echo "CMake installation failed"; exit 1; }
+
 echo "Upgrading pip, setuptools, and wheel"
 pip install --upgrade pip setuptools wheel || { echo "Failed to upgrade pip and setuptools"; exit 1; }
-
 
 echo "Installing Python requirements"
 pip install -r requirements.txt || { echo "Failed to install Python requirements"; exit 1; }

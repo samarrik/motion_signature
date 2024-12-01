@@ -1,17 +1,14 @@
-# Motion signature of individuals
-
-The goal of this project is to replicate the experiments conducted by Maty Bohacek in his paper [Protecting President Zelenskyi against deepfakes](https://arxiv.org/pdf/2206.12043).
-
+# Talking Motion Signature of individuals
 ## Usage
 
-### With extracted data (== using the data given by the author)
+### Installation with extracted data (== using the data given by the author)
 - Run Jupyter running `jupyter-notebook` and choosing `main.ipynb` in Jupyter's interface
 
-### With no extracted data
+### Full installation
 
-- Collect the dataset *[TODO]*, follow the sturucture and the naming precisely.
+- Collect the dataset, follow the sturucture and the naming precisely, it should be one folder with all the videos in it.
 - Install all the required applications using `bash install.sh`
-- Run the extraction process by `python extract.py`
+- Run the extraction process by `python main.py`
 
 All the potentional questions and suggestions can be addressed via Issues.<br>
 Ivan Samarskyi, 2024

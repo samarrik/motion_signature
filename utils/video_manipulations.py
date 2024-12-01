@@ -1,8 +1,11 @@
-
 import os
 import shutil
+import subprocess
 import logging
 from moviepy.video.io.VideoFileClip import VideoFileClip
+
+# Set up logging
+logger  = logging.getLogger("video_manipulations")
 
 def videos2clips(videos_path: str, clip_length: int = 10, overlap: int = 5):
 
