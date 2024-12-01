@@ -28,12 +28,28 @@ if [[ ! -d "$PYTHON_DIR" ]]; then
 else
     echo "Python 3.9 is already installed locally."
 fi
-export PATH="$PYTHON_DIR/bin:$PATH"
 
 echo "Setting up Python virtual environment with Python 3.9"
 python3.9 -m venv venv_ms
 source venv_ms/bin/activate
-# pip install --upgrade pip
+
+echo "Installing CMake locally"
+CMAKE_DIR="$HOME/local/cmake"
+if [[ ! -d "$CMAKE_DIR" ]]; then
+    mkdir -p "$CMAKE_DIR"
+    cd "$CMAKE_DIR"
+    wget https://github.com/Kitware/CMake/releases/download/v3.27.6/cmake-3.27.6-linux-x86_64.tar.gz -O cmake.tar.gz
+    tar -xzf cmake.tar.gz --strip-components=1
+    export PATH="$CMAKE_DIR/bin:$PATH"
+    cd -
+else
+    echo "CMake is already installed locally."
+    export PATH="$CMAKE_DIR/bin:$PATH"
+fi
+
+echo "Upgrading pip, setuptools, and wheel"
+pip install --upgrade pip setuptools wheel || { echo "Failed to upgrade pip and setuptools"; exit 1; }
+
 
 echo "Installing Python requirements"
 pip install -r requirements.txt || { echo "Failed to install Python requirements"; exit 1; }
