@@ -55,7 +55,17 @@ echo "Upgrading pip, setuptools, and wheel"
 pip install --upgrade pip setuptools wheel || { echo "Failed to upgrade pip and setuptools"; exit 1; }
 
 echo "Installing Python requirements"
-pip install -r requirements.txt || { echo "Failed to install Python requirements"; exit 1; }
+pip install -r requirements.txt
+if [[ $? -ne 0 ]]; then
+    echo "Failed to install Python requirements. Attempting to build and install dlib with local CMake."
+    
+    echo "Building and installing dlib with local CMake"
+    CMAKE_PATH="$CMAKE_DIR/bin/cmake"
+    CMAKE_ARGS="-DCMAKE_PREFIX_PATH=$CMAKE_DIR -DCMAKE_BUILD_TYPE=Release"
+    pip install dlib --no-binary dlib --global-option="build_ext" --global-option="$CMAKE_ARGS" || { echo "Failed to build and install dlib"; exit 1; }
+else
+    echo "Python requirements installed successfully."
+fi
 
 echo "Downloading required models"
 download_models
