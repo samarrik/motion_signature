@@ -185,6 +185,7 @@ def extract_features_clip(clip_path: str, extractors_objects: dict, extractors_f
 
         # Specific to pyAFAR data preprocessing
         used_features = extractors_features["pyafar"]["used"]
+        print(pf_extracted_df.columns)
         pf_extracted_df = pf_extracted_df[used_features]
 
         # Concatenate to the final DataFrame

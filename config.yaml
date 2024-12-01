@@ -67,14 +67,14 @@ extractors_features:
       - Yaw
       - Eye Aspect Ratio
       - Mouth Aspect Ratio
-      - Occ_au_01
-      - Occ_au_02
-      - Occ_au_04
-      - Occ_au_07
+      - Occ_au_1
+      - Occ_au_2
+      - Occ_au_4
+      - Occ_au_7
       - Occ_au_15
       - Occ_au_23
       - Occ_au_24
-      - Int_au_06
+      - Int_au_6
       - Int_au_10
       - Int_au_12
       - Int_au_14

@@ -1,5 +1,4 @@
 data/*
-!data/correlations.csv
 !data/media
 
 utils/OpenFace
