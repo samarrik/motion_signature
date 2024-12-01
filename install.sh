@@ -7,38 +7,39 @@ if [[ "$installation_done" != "y" && "$installation_done" != "Y" && "$installati
     exit 1
 fi
 
-# Local specs and dependencies: NVIDIA GeForce 3050
-# Tensorflow 12.2
-#   CUDA version: 8.6
-#   cuDNN version: 11.8
+echo "Installing Python 3.9 using pyenv"
+if ! command -v pyenv &>/dev/null; then
+    echo "pyenv is not installed. Installing pyenv locally."
+    curl https://pyenv.run | bash
+    export PATH="$HOME/.pyenv/bin:$PATH"
+    eval "$(pyenv init --path)"
+    eval "$(pyenv virtualenv-init -)"
+fi
 
+export PATH="$HOME/.pyenv/bin:$PATH"
+eval "$(pyenv init --path)"
+eval "$(pyenv virtualenv-init -)"
 
-echo "Installing Python 3.9"
-sudo add-apt-repository ppa:deadsnakes/ppa
-sudo apt update && sudo apt upgrade -y
-sudo apt install -y python3.9 python3.9-venv python3.9-dev
+if ! pyenv versions | grep -q "3.9"; then
+    echo "Python 3.9 is not installed. Installing it using pyenv."
+    pyenv install 3.9.18
+fi
+
+pyenv local 3.9.18
 
 echo "Setting up Python virtual environment with Python 3.9"
 python3.9 -m venv venv_ms
 source venv_ms/bin/activate
 pip install --upgrade pip
 
-echo "Insatlling cmake"
-sudo apt install cmake
-
-echo "Make sure the compiler supports C++11"
-sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
-sudo apt install g++-11
-
 echo "Installing Python requirements"
-pip install -qr requirements.txt
+pip install -r requirements.txt
 
 echo "Downloading required models"
 download_models
 # mkdir -p .data/models/mediapipe
-# sudo wget -O .data/models/mediapipe/pose_landmarker.task -q https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_heavy/float16/1/pose_landmarker_heavy.task   
+# wget -O .data/models/mediapipe/pose_landmarker.task -q https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_heavy/float16/1/pose_landmarker_heavy.task
 
 echo "Everything is ready. Activate the virtual environment and run main.py."
 echo "Run the following command to activate the virtual environment:"
 echo "source venv_ms/bin/activate"
-
