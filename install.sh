@@ -23,7 +23,6 @@ source ~/.bashrc
 
 # Setting up Python virtual environment with all dependencies
 echo "Creating Conda environment..."
-conda clean --all
 if [ -f "environment.yml" ]; then
     conda env create -f environment.yml
 else
