@@ -74,10 +74,10 @@ extractors_features:
       - Occ_au_15
       - Occ_au_23
       - Occ_au_24
-      - Int_au_6
-      - Int_au_10
-      - Int_au_12
-      - Int_au_14
-      - Int_au_17
+      - Occ_au_6
+      - Occ_au_10
+      - Occ_au_12
+      - Occ_au_14
+      - Occ_au_17
     all:
       # Too much, but can also yield normalized facial landmarks

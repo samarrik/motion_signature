@@ -46,7 +46,7 @@ def extract_features(files: list, config_path: str, correlations: bool = True):
                 'AUs':["au_1", "au_2","au_4", "au_6","au_7", "au_10","au_12", "au_14","au_15", "au_17","au_23", "au_24"], 
                 'GPU': True, 
                 'max_frames': 1000, 
-                'AU_Int': ["au_6", "au_10","au_12", "au_14","au_17"], 
+                'AU_Int': [], 
                 'batch_size': 100, 
                 'PID': False}
         elif extractor == "mediapipe":
@@ -128,6 +128,11 @@ def extract_features(files: list, config_path: str, correlations: bool = True):
                         out.write(clip_frame)
                     out.release()
 
+                    # Check if the write was successful
+                    if not os.path.exists(output_path):
+                        logger.error(f"Failed to write clip to {output_path}")
+                        exit(1)
+
                     # Extract features from the clip's frames
                     features_extracted = extract_features_clip(output_path, extractors_objects, extractors_features)
                     extracted_features_path = os.path.join(extracted_path, f"{clip_name}_features.csv")
@@ -158,6 +163,8 @@ def extract_features(files: list, config_path: str, correlations: bool = True):
 
     # If correlations are requested, export them
     if correlations and not correlations_df.empty:
+        correlations_df = correlations_df.T
+        correlations_df.index.name = 'clip_name'
         correlations_df.to_csv(correlations_path, index=True)
 
 
@@ -185,7 +192,6 @@ def extract_features_clip(clip_path: str, extractors_objects: dict, extractors_f
 
         # Specific to pyAFAR data preprocessing
         used_features = extractors_features["pyafar"]["used"]
-        print(pf_extracted_df.columns)
         pf_extracted_df = pf_extracted_df[used_features]
 
         # Concatenate to the final DataFrame
@@ -218,6 +224,14 @@ def extract_features_clip(clip_path: str, extractors_objects: dict, extractors_f
         # Concatenate to the final DataFrame
         extracted_features = pd.concat([extracted_features, mp_extracted_normalized_df], axis=1)
     # Add other extractors here if needed
+
+    # Handle NaN values, replace with mean if the number of NaNs is less then 30% of the values in the column
+    for column in extracted_features.columns:
+        nan_ratio = extracted_features[column].isna().mean()
+        if nan_ratio < 0.5:
+            # Replace NaN with column mean
+            extracted_features[column].fillna(extracted_features[column].mean(), inplace=True)
+        # Else leave NaNs as they are
 
     return extracted_features
 
@@ -268,7 +282,6 @@ def mediapipe_extractor(clip_path: str, extractor: mp.solutions.pose.Pose, featu
         ret, frame = vid_obj.read()
         if not ret:
             break
-
         # Convert frame to RGB format as required by MediaPipe
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 

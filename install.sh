@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Setting up the structure
+mkdir data/dataset
+mkdir data/extracted
+
 echo "Please install NVIDIA drivers, CUDA, and WSL2 using the instructions from the official NVIDIA website."
 read -p "Have you completed the installation? (y/n): " installation_done
 if [[ "$installation_done" != "y" && "$installation_done" != "Y" && "$installation_done" != "yes" && "$installation_done" != "Yes" && "$installation_done" != "yea" && "$installation_done" != "yeah" && "$installation_done" != "YES" ]]; then
@@ -13,44 +17,28 @@ if ! command -v wget &>/dev/null; then
     exit 1
 fi
 
-echo "Installing Python 3.9 locally"
-PYTHON_DIR="$HOME/python39"
-if [[ ! -d "$PYTHON_DIR" ]]; then
-    mkdir -p "$PYTHON_DIR"
-    wget https://www.python.org/ftp/python/3.9.18/Python-3.9.18.tgz -O Python-3.9.18.tgz
-    tar -xzf Python-3.9.18.tgz
-    cd Python-3.9.18
-    ./configure --prefix="$PYTHON_DIR"
-    make -j$(nproc)
-    make install
-    cd ..
-    rm -rf Python-3.9.18 Python-3.9.18.tgz
-else
-    echo "Python 3.9 is already installed locally."
-fi
-export PATH="$PYTHON_DIR/bin:$PATH"
+echo "Download conda and build it"
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+bash Miniconda3-latest-Linux-x86_64.sh
+rm Miniconda3-latest-Linux-x86_64.sh
+conda init
+source ~/.bashrc
+conda update conda
+conda --version
 
-echo "Setting up Python virtual environment with Python 3.9"
-python3.9 -m venv venv_ms
-source venv_ms/bin/activate
+echo "Setting up Python virtual environment with all dependencies"
+conda env create -f environment.yml
+conda init
+conda activate ms-env
 
-echo "Installing CMake"
-sudo apt update
-sudo apt install -y cmake
-cmake --version || { echo "CMake installation failed"; exit 1; }
-
-echo "Upgrading pip, setuptools, and wheel"
-pip install --upgrade pip setuptools wheel || { echo "Failed to upgrade pip and setuptools"; exit 1; }
-
-echo "Installing Python requirements"
-pip install -r requirements.txt || { echo "Failed to install Python requirements."; exit 1; }
+# Create symbolic links to NVIDIA shared libraries
+pushd $(dirname $(python -c 'print(__import__("tensorflow").__file__)'))
+ln -svf ../nvidia/*/lib/*.so* .
+popd
 
 echo "Downloading required models"
 download_models
-# MODEL_DIR = ...
-# mkdir -p "$MODEL_DIR"
-# wget -O "$MODEL_DIR/pose_landmarker.task" -q https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_heavy/float16/1/pose_landmarker_heavy.task || { echo "Failed to download model"; exit 1; }
 
 echo "Everything is ready. Activate the virtual environment and run main.py."
 echo "Run the following command to activate the virtual environment:"
-echo "source venv_ms/bin/activate"
+echo "conda activate ms-env"

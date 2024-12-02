@@ -3,7 +3,7 @@ data/*
 
 utils/OpenFace
 
-venv_ms/
+ms-env/
 
 # Ignore garbage py files and folders
 __pycache__/

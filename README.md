@@ -1,4 +1,4 @@
-# Talking Motion Signature of individuals
+# Talking Motion Signature of Individuals
 ## Usage
 
 ### Installation with extracted data (== using the data given by the author)
