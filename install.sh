@@ -18,8 +18,6 @@ rm Miniconda3.sh
 # Initialize Conda
 export PATH="$HOME/miniconda/bin:$PATH"
 source $HOME/miniconda/etc/profile.d/conda.sh
-conda init
-source ~/.bashrc
 
 # Setting up Python virtual environment with all dependencies
 echo "Creating Conda environment..."
