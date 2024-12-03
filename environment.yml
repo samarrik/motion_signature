@@ -1,12 +1,10 @@
 name: ms-env
 channels:
-  - nvidia # Ensures NVIDIA packages are prioritized
+  - nvidia
   - conda-forge
 dependencies:
   - python=3.9
   - cmake
-  - cudatoolkit=11.8
-  - cudnn
   - ffmpeg
   - pandas
   - scikit-learn

@@ -1,5 +1,12 @@
 #!/bin/bash
 
+echo "Please install CUDA, and cuDNN using either modules or instructions from nvidia website."
+read -p "Have you completed the installation? (y/n): " installation_done
+if [[ "$installation_done" != "y" && "$installation_done" != "Y" && "$installation_done" != "yes" && "$installation_done" != "Yes" && "$installation_done" != "yea" && "$installation_done" != "yeah" && "$installation_done" != "YES" ]]; then
+@@ -13,44 +17,28 @@ if ! command -v wget &>/dev/null; then
+    exit 1
+fi
+
 # Setting up the structure
 mkdir -p data/dataset
 mkdir -p data/extracted
