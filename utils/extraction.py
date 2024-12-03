@@ -47,7 +47,7 @@ def extract_features(files: list, config_path: str, correlations: bool = True):
                 'GPU': True, 
                 'max_frames': 1000, 
                 'AU_Int': [], 
-                'batch_size': 100, 
+                'batch_size': 300, 
                 'PID': False}
         elif extractor == "mediapipe":
             extractors_objects["mediapipe"] = mp.solutions.pose.Pose(

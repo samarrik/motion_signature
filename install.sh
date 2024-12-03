@@ -1,9 +1,9 @@
 #!/bin/bash
 
-echo "Please install CUDA, and cuDNN using either modules or instructions from nvidia website."
-read -p "Have you completed the installation? (y/n): " installation_done
-if [[ "$installation_done" != "y" && "$installation_done" != "Y" && "$installation_done" != "yes" && "$installation_done" != "Yes" && "$installation_done" != "yea" && "$installation_done" != "yeah" && "$installation_done" != "YES" ]]; then
-@@ -13,44 +17,28 @@ if ! command -v wget &>/dev/null; then
+echo "Please install CUDA and cuDNN using NVIDIA's instructions."
+read -p "Have you completed the installation? (yes/y): " installation_done
+if [[ "$installation_done" != "yes" && "$installation_done" != "y" ]]; then
+    echo "Complete the installation before proceeding."
     exit 1
 fi
 
@@ -18,15 +18,13 @@ if ! command -v wget &>/dev/null; then
 fi
 
 echo "Downloading Miniconda and setting it up..."
-wget -q https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O Miniconda3.sh
-bash Miniconda3.sh -b -p $HOME/miniconda
-rm Miniconda3.sh
+mkdir -p ~/miniconda3
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda3/miniconda.sh
+bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3
+rm ~/miniconda3/miniconda.sh
+source ~/miniconda3/bin/activate
+conda init --all
 
-# Initialize Conda
-export PATH="$HOME/miniconda/bin:$PATH"
-source $HOME/miniconda/etc/profile.d/conda.sh
-
-# Setting up Python virtual environment with all dependencies
 echo "Creating Conda environment..."
 if [ -f "environment.yml" ]; then
     conda env create -f environment.yml
