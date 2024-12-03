@@ -8,7 +8,7 @@ dependencies:
   - ffmpeg
   - pandas
   - scikit-learn
-  - jupyterq
+  - jupyter
   - matplotlib
   - seaborn
   - dlib
