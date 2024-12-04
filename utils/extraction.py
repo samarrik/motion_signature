@@ -118,7 +118,7 @@ def extract_features(files: list, config_path: str, correlations: bool = True):
                     # Assign a sequential number to the clip
                     clip['idx'] = clip_idx
                     clip_idx += 1
-                    clip_name = f"{os.path.splitext(os.path.basename(file))[0]}_c{clip['idx']}"
+                    clip_name = f"{os.path.splitext(os.path.basename(file))[0]}_c{clip['idx']:05d}"
 
                     output_path = os.path.join(extracted_path, f"{clip_name}_tmp.mp4")
                     fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # Codec for mp4
@@ -135,7 +135,7 @@ def extract_features(files: list, config_path: str, correlations: bool = True):
 
                     # Extract features from the clip's frames
                     features_extracted = extract_features_clip(output_path, extractors_objects, extractors_features)
-                    extracted_features_path = os.path.join(extracted_path, f"{clip_name}_features.csv")
+                    extracted_features_path = os.path.join(extracted_path, f"{clip_name}.csv")
                     features_extracted.to_csv(extracted_features_path, index=False)
 
                     # Remove the processed vid
