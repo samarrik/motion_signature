@@ -53,46 +53,61 @@ def normalize_landmarks(landmarks: dict) -> (bool, dict):
 import pandas as pd
 
 
+import pandas as pd
+import logging
+
 def normalize_landmarks_df(landmarks_df: pd.DataFrame) -> pd.DataFrame:
     original_landmarks = landmarks_df.copy()
 
     # Normalize individual landmarks for each row
     for index, row in landmarks_df.iterrows():
-        # Prevent from even starting the analysis if some necessary elements are not present
-        if (row["leftShoulder"][0] == 0 or row["rightShoulder"][0] == 0 or row["leftEye"][0] == 0):
-            logging.info(f"Cannot normalize the frame at index {index}, crucial landmarks are missing, NULLing the frame")
-            landmarks_df.at[index, :] = (None, None)
-            continue  # Skip to the next row
+        try:
+            # Prevent from even starting the analysis if some necessary elements are not present
+            if (row["leftShoulder"] is None or 
+                row["rightShoulder"] is None or 
+                row["leftEye"] is None or 
+                row["leftShoulder"][0] == 0 or 
+                row["rightShoulder"][0] == 0 or 
+                row["leftEye"][0] == 0):
+                logging.info(f"Cannot normalize the frame at index {index}, crucial landmarks are missing or incomplete, NULLing the frame")
+                landmarks_df.loc[index] = {key: None for key in landmarks_df.columns}
+                continue  # Skip to the next row
 
-        left_shoulder = (row["leftShoulder"][0], row["leftShoulder"][1])
-        right_shoulder = (row["rightShoulder"][0], row["rightShoulder"][1])
+            left_shoulder = (row["leftShoulder"][0], row["leftShoulder"][1])
+            right_shoulder = (row["rightShoulder"][0], row["rightShoulder"][1])
 
-        # Calculation of the estimation of the head metric
-        shoulder_distance = ((((left_shoulder[0] - right_shoulder[0]) ** 2) + (
-                (left_shoulder[1] - right_shoulder[1]) ** 2)) ** 0.5)
-        head_metric = shoulder_distance / 2
+            # Calculation of the estimation of the head metric
+            shoulder_distance = ((((left_shoulder[0] - right_shoulder[0]) ** 2) + 
+                                  ((left_shoulder[1] - right_shoulder[1]) ** 2)) ** 0.5)
+            head_metric = shoulder_distance / 2
 
-        # Set the starting and ending point of the normalization bounding box
-        starting_point = [row["leftShoulder"][0] - 2 * head_metric,
-                          row["leftEye"][0] + head_metric]
-        ending_point = [row["rightShoulder"][0] + 2 * head_metric, starting_point[1] - 6 * head_metric]
+            # Set the starting and ending point of the normalization bounding box
+            starting_point = [left_shoulder[0] - 2 * head_metric,
+                              row["leftEye"][1] + head_metric]
+            ending_point = [right_shoulder[0] + 2 * head_metric, starting_point[1] - 6 * head_metric]
 
-        # Normalize individual landmarks for the current row
-        for key in landmarks_df.columns:
-            # Prevent from trying to normalize incorrectly captured points
-            if row[key] == (0, 0):
-                continue
+            # Normalize individual landmarks for the current row
+            for key in landmarks_df.columns:
+                landmark = row[key]
+                if landmark is None or landmark == (0, 0):
+                    continue  # Skip null or invalid points
 
-            if (ending_point[0] - starting_point[0]) == 0 or (starting_point[1] - ending_point[1]) == 0:
-                logging.warning(f"Problematic normalization at index {index}, NULLing the frame")
-                landmarks_df.at[index, :] = (None, None)
-                break
-            
-            landmark_norm_x = (row[key][0] - starting_point[0]) / (ending_point[0] - starting_point[0])
-            landmark_norm_y = (row[key][1] - starting_point[1]) / (ending_point[1] - starting_point[1])
-            landmarks_df.at[index, key] = (landmark_norm_x, landmark_norm_y)
+                if (ending_point[0] - starting_point[0]) == 0 or (starting_point[1] - ending_point[1]) == 0:
+                    logging.warning(f"Problematic normalization at index {index}, NULLing the frame")
+                    landmarks_df.loc[index] = {key: None for key in landmarks_df.columns}
+                    break
+                
+                # Normalize the landmark coordinates
+                landmark_norm_x = (landmark[0] - starting_point[0]) / (ending_point[0] - starting_point[0])
+                landmark_norm_y = (landmark[1] - starting_point[1]) / (ending_point[1] - starting_point[1])
+                landmarks_df.at[index, key] = (landmark_norm_x, landmark_norm_y)
+
+        except Exception as e:
+            logging.error(f"Error processing row {index}: {e}")
+            landmarks_df.loc[index] = {key: None for key in landmarks_df.columns}
 
     return landmarks_df
+
 
 if __name__ == "__main__":
     pass
