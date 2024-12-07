@@ -33,6 +33,13 @@ else
     exit 1
 fi
 
+# Installing the development version of py-feat
+cd ~/miniconda3/envs/ms-env/lib
+git clone https://github.com/cosanlab/feat.git
+cd feat
+pip install -e .
+
+
 conda activate ms-env
 
 # Create symbolic links to NVIDIA shared libraries (if applicable)
@@ -44,9 +51,6 @@ else
     echo "Error: TensorFlow not installed. Verify your environment.yml or install manually."
     exit 1
 fi
-
-echo "Downloading required models..."
-download_models
 
 echo "Everything is ready. Activate the virtual environment and run main.py."
 echo "Run the following command to activate the virtual environment:"
