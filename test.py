@@ -16,8 +16,6 @@ video_prediction = detector.detect(
     data_type="video", 
     face_detection_threshold=0.7,
     device='cuda',
-    num_workers=5,
-    batch_size = 500,
 )
 
 # End timing
