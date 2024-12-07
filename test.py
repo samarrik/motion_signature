@@ -1,5 +1,6 @@
 import time
 from feat import Detector
+from feat.utils.io import video_to_tensor
 
 # Initialize the detector
 detector = Detector()
@@ -12,10 +13,11 @@ start_time = time.time()
 
 # Perform detection
 video_prediction = detector.detect(
-    video_path, 
-    data_type="video", 
-    face_detection_threshold=0.7,
-    device='cuda',
+    video_to_tensor(video_path), 
+    data_type="tensor",
+    face_detection_threshold=0.8,
+    num_workers=5,
+    batch_size=100,
 )
 
 # End timing
