@@ -15,6 +15,7 @@ start_time = time.time()
 video_prediction = detector.detect(
     video_to_tensor(video_path), 
     data_type="tensor",
+    device="cuda",
     face_detection_threshold=0.8,
     num_workers=5,
     batch_size=100,
