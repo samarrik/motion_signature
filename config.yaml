@@ -1,5 +1,22 @@
+# High-level video processing options
+compress_videos: False
+extract_features: True
+compute_correlations: True
+
+# Video compression
+compressions_num: 1
+
+# Feature extraction
 extractors:
   - py-feat
+
+extracted_features_raw_path:
+  - data/extracted
+
+# Computation of correlations
+
+
+
 
 extracted_path: data/extracted
 correlations_path: data/correlations.csv
