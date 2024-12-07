@@ -17,7 +17,7 @@ video_prediction = detector.detect(
     data_type="tensor",
     face_detection_threshold=0.8,
     num_workers=5,
-    batch_size=500,
+    batch_size=100,
 )
 
 # End timing
