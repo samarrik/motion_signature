@@ -5,11 +5,7 @@ dependencies:
   - python=3.9
 
   - cmake
-  - pandas
-  - numpy
   - scikit-learn
   - jupyter
   - matplotlib
   - tensorflow
-
-  - pip
