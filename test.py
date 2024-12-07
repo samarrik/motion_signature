@@ -13,7 +13,7 @@ start_time = time.time()
 # Perform detection
 video_prediction = detector.detect(
     video_path, 
-    data_type="tensor", 
+    data_type="video", 
     face_detection_threshold=0.7,
     device='cuda',
     num_workers=5,
