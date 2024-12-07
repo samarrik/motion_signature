@@ -1,23 +1,10 @@
-"""
-prepare_data.py
-
-Processes a video dataset for identity-related tasks by dividing videos into clips and extracting specified features.
-
-Main functionalities:
-- Checks the configuration file and given configurations.
-- Runs feature extraction and computes correlations
-
-Usage:
-    python3 prepare_data.py --config path/to/config.yaml
-"""
-
 import os
 import sys
 import logging
 import argparse
 from pathlib import Path
 from yaml import safe_load
-from utils.extraction import compress_videos, extract_features, compute_correlations
+from utils import compress_videos, extract_features, compute_correlations
 
 # Configure logging
 logging.basicConfig(

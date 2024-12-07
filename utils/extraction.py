@@ -52,7 +52,7 @@ def extract_features(files, config):
         logger.error("No extractors specified in the configuration.")
         raise ValueError("The configuration must specify at least one extractor.")
 
-    extracted_features_raw_path = config.get("extracted_features_raw_path")
+    extracted_features_raw_path = config.get("extracted_features_raw_path")[0]
     if not extracted_features_raw_path:
         logger.error("No extracted path specified in the configuration.")
         raise ValueError("The configuration must specify an extracted path.")
@@ -67,7 +67,7 @@ def extract_features(files, config):
     for file in tqdm(files, desc="Processing Videos"):
         try:
             video_name = os.path.splitext(os.path.basename(file))[0]
-            features_path = os.path.join(extracted_path, f"{video_name}.csv")
+            features_path = os.path.join(extracted_features_raw_path, f"{video_name}.csv")
 
             logger.info(f"Processing video: {file}")
             detector = extractors_objects.get("py-feat")
@@ -86,6 +86,7 @@ def extract_features(files, config):
                 num_workers=10,
                 batch_size=500,
                 save=features_path,
+                progress_bar=False,
             )
 
             logger.info(f"Features saved to: {features_path}")

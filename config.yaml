@@ -1,7 +1,12 @@
+# Data paths
+dataset_path: data/dataset
+extracted_features_raw_path: data/extracted
+correlations_path: data/correlations.csv
+
 # High-level video processing options
 compress_videos: False
 extract_features: True
-compute_correlations: True
+compute_correlations: False
 
 # Video compression
 compressions_num: 1
@@ -10,17 +15,6 @@ compressions_num: 1
 extractors:
   - py-feat
 
-extracted_features_raw_path:
-  - data/extracted
-
-# Computation of correlations
-
-
-
-
-extracted_path: data/extracted
-correlations_path: data/correlations.csv
-  
 extractors_features:
   py-feat:
     used:
@@ -65,3 +59,10 @@ extractors_features:
       - rightHeel
       - leftFootIndex
       - rightFootIndex
+
+extracted_features_raw_path:
+  - data/extracted
+
+# Computation of correlations
+
+
