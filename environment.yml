@@ -10,5 +10,6 @@ dependencies:
   - scikit-learn
   - jupyter
   - matplotlib
+  - tensorflow
 
   - pip
