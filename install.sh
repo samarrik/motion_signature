@@ -1,13 +1,6 @@
 #!/bin/bash
 
-echo "Please install CUDA and cuDNN using NVIDIA's instructions."
-read -p "Have you completed the installation? (yes/y): " installation_done
-if [[ "$installation_done" != "yes" && "$installation_done" != "y" ]]; then
-    echo "Complete the installation before proceeding."
-    exit 1
-fi
-
-# Setting up the structure
+echo "Setting up "
 mkdir -p data/dataset
 mkdir -p data/extracted
 
