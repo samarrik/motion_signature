@@ -3,7 +3,7 @@ from feat import Detector
 from feat.utils.io import video_to_tensor
 
 # Initialize the detector
-detector = Detector()
+detector = Detector(device='cuda')
 
 # Path to the video
 video_path = "data/dataset/id01026_z_JRShoMw3k_00104.mp4"
@@ -15,7 +15,6 @@ start_time = time.time()
 video_prediction = detector.detect(
     video_to_tensor(video_path), 
     data_type="tensor",
-    device="cuda",
     face_detection_threshold=0.8,
     num_workers=5,
     batch_size=100,
