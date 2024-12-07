@@ -1,301 +1,193 @@
 
 import os
-import cv2
 import logging
-import mediapipe as mp
 import pandas as pd
 from itertools import combinations
 from yaml import safe_load
 from tqdm import tqdm
-from PyAFAR_GUI.adult_afar import adult_afar
-from . import normalizators
+from feat import Detector
+from feat.utils.io import video_to_tensor
 
 # Set up logging
 logger  = logging.getLogger("extraction")
 
-def extract_features(files: list, config_path: str, correlations: bool = True):
+def extract_features(files: list, config_path: str):
     """
     Extract features from video files by processing each frame within defined intervals (logical clips).
 
     Args:
         files (list): List of video file paths.
         config_path (str): Path to the configuration file.
-        correlations (bool): Whether to compute and save correlations.
-
     Returns:
         None
     """
-
-    logger.info("Loading the configuration for extraction.")
-    # Load configuration parameters 
+    # Load configuration parameters
     with open(config_path, 'r') as config_file:
         config = safe_load(config_file)
-
-    # Load the configurations which define how clips are being yielded
-    clip_length = config["clip"]["length"]
-    clip_overlap = config["clip"]["overlap"]
 
     # Load the names of all the extractors requested
     extractors = config["extractors"]
 
-    # Configer the extractors themselves
+    # Configure the extractors
     extractors_objects = {}
-    for extractor in extractors:
-        if extractor == "pyafar":
-            extractors_objects["pyafar"] = { 
-                'AUs':["au_1", "au_2","au_4", "au_6","au_7", "au_10","au_12", "au_14","au_15", "au_17","au_23", "au_24"], 
-                'GPU': True, 
-                'max_frames': 1000, 
-                'AU_Int': [], 
-                'batch_size': 300, 
-                'PID': False}
-        elif extractor == "mediapipe":
-            extractors_objects["mediapipe"] = mp.solutions.pose.Pose(
-                static_image_mode=False,
-                model_complexity=1,
-                enable_segmentation=False,
-                min_detection_confidence=0.5,
-                min_tracking_confidence=0.5)
-        # Add other extractors here if needed
+    if "py-feat" in extractors:
+        extractors_objects["py-feat"] = Detector(device="cuda")
 
-    # Load and  all the features of the requested extractors
-    extractors_features = config["extractors_features"]
-
-    # Define the path where the raw extrcated data wil be saved
+    # Define the path where the raw extracted data will be saved
     extracted_path = config['extracted_path']
-    correlations_path = config['correlations_path']
 
-    # DataFrame to store correlations if requested
-    correlations_df = pd.DataFrame() if correlations else None
+    for file in files:
+        try:
+            # Generate features path
+            video_name = os.path.splitext(os.path.basename(file))[0]
+            features_path = os.path.join(extracted_path, f"{video_name}.csv")
 
-    # Process video files
-    for file in tqdm(files, desc="Processing video files", unit="files"):
-        # Load the video and try to read from it
-        vid = cv2.VideoCapture(file)
-        if not vid.isOpened():
-            logging.error(f"Cannot open video file {file}")
+            # Compute the prediction
+            detector = extractors_objects.get("py-feat")
+            video_prediction = detector.detect(
+                video_to_tensor(file), 
+                data_type="tensor",
+                face_detection_threshold=0.8,
+                num_workers=10,
+                batch_size=500,
+                save=features_path,
+            )
+
+        except Exception as e:
+            logger.error(f"Error processing file {file}: {e}")
             continue
 
-        # Get video properties
-        fps = vid.get(cv2.CAP_PROP_FPS)
-        vid_frame_num = int(vid.get(cv2.CAP_PROP_FRAME_COUNT))
+def compute_correlations(config):
+    # Get the folder where all the raw extracted data is stored
+    pass
 
-        # Get clip properties
-        clip_frame_num = int(fps * clip_length)  # Length of the clip in frames
-        clip_frame_interval = int(fps * (clip_length - clip_overlap))  # Interval between clip starts
+# def extract_features_clip(clip_path: str, extractors_objects: dict, extractors_features: dict) -> pd.DataFrame:
+#     """
+#     Extract features from a video clip using specified extractors.
 
-        # Generate list of clip start frames
-        clip_starts = []
-        current_start_frame = 0
-        while current_start_frame + clip_frame_num // 3 < vid_frame_num:  # Allow clips of smaller length up to 1/3 of the original
-            clip_starts.append(current_start_frame)
-            current_start_frame = min(current_start_frame + clip_frame_interval, vid_frame_num)
+#     Args:
+#         clip_path (str): Path to the video clip.
+#         extractors_objects (dict): Dictionary of initialized extractor objects.
+#         extractors_features (dict): Dictionary specifying features to use from each extractor.
 
-        active_clips = []
-        frame_number = 0
-        clip_idx = 0
+#     Returns:
+#         pd.DataFrame: DataFrame containing extracted features.
+#     """
+#     extracted_features = pd.DataFrame()
 
-        # Read frames sequentially
-        while True:
-            ret, frame = vid.read()
-            if not ret:
-                break  # End of video reached
+#     # Extract features using pyAFAR
+#     if "pyafar" in extractors_objects:
+#         pf_extracted_df = pyafar_extractor(
+#             clip_path, 
+#             extractors_objects["pyafar"], 
+#             None,)
 
-            # Check if a new clip should start at this frame
-            if frame_number in clip_starts:
-                active_clips.append({
-                    'start_frame': frame_number,
-                    'frames': [],
-                    'idx': None
-                })
+#         # Specific to pyAFAR data preprocessing
+#         used_features = extractors_features["pyafar"]["used"]
+#         pf_extracted_df = pf_extracted_df[used_features]
 
-            # Append the frame to all active clips
-            for clip in active_clips[:]:
-                clip['frames'].append(frame)
+#         # Concatenate to the final DataFrame
+#         extracted_features = pd.concat([extracted_features, pf_extracted_df], axis=1)
 
-                # Check if the clip has reached the required length
-                if len(clip['frames']) == clip_frame_num:
-                    # Assign a sequential number to the clip
-                    clip['idx'] = clip_idx
-                    clip_idx += 1
-                    clip_name = f"{os.path.splitext(os.path.basename(file))[0]}_c{clip['idx']:05d}"
+#     # Extract features using MediaPipe
+#     if "mediapipe" in extractors_objects:
+#         mp_extracted_df = mediapipe_extractor(
+#             clip_path,
+#             extractors_objects["mediapipe"],
+#             extractors_features["mediapipe"]["all"]
+#         )
 
-                    output_path = os.path.join(extracted_path, f"{clip_name}_tmp.mp4")
-                    fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # Codec for mp4
-                    out = cv2.VideoWriter(output_path, fourcc, fps, (frame.shape[1], frame.shape[0]))
+#         # Specific to MediaPipe data preprocessing
+#         used_features = extractors_features["mediapipe"]["used"]
+#         mp_extracted_df = mp_extracted_df[used_features]
 
-                    for clip_frame in clip['frames']:
-                        out.write(clip_frame)
-                    out.release()
+#         # Perform normalization for the whole DataFrame
+#         mp_extracted_normalized_df = normalizators.normalize_landmarks_df(mp_extracted_df)
 
-                    # Check if the write was successful
-                    if not os.path.exists(output_path):
-                        logger.error(f"Failed to write clip to {output_path}")
-                        exit(1)
+#         # Separate X and Y coordinates
+#         for column in mp_extracted_normalized_df.columns:
+#             if isinstance(mp_extracted_normalized_df[column].iloc[0], tuple):
+#                 mp_extracted_normalized_df[f"{column}_X"] = mp_extracted_normalized_df[column].apply(
+#                     lambda coord: coord[0] if coord is not None else None)
+#                 mp_extracted_normalized_df[f"{column}_Y"] = mp_extracted_normalized_df[column].apply(
+#                     lambda coord: coord[1] if coord is not None else None)
+#                 mp_extracted_normalized_df.drop(column, axis=1, inplace=True)  # Delete the initial column
 
-                    # Extract features from the clip's frames
-                    features_extracted = extract_features_clip(output_path, extractors_objects, extractors_features)
-                    extracted_features_path = os.path.join(extracted_path, f"{clip_name}.csv")
-                    features_extracted.to_csv(extracted_features_path, index=False)
+#         # Concatenate to the final DataFrame
+#         extracted_features = pd.concat([extracted_features, mp_extracted_normalized_df], axis=1)
+#     # Add other extractors here if needed
 
-                    # Remove the processed vid
-                    os.remove(output_path)
+#     # Handle NaN values, replace with mean if the number of NaNs is less then 30% of the values in the column
+#     for column in extracted_features.columns:
+#         nan_ratio = extracted_features[column].isna().mean()
+#         if nan_ratio < 0.5:
+#             # Replace NaN with column mean
+#             extracted_features[column].fillna(extracted_features[column].mean(), inplace=True)
+#         # Else leave NaNs as they are
 
-                    # Compute correlation and add them to the DataFrame if requested
-                    if correlations:
-                        correlations_matrix = features_extracted.corr()
-
-                        # Select required correlations
-                        correlations_dict = {}
-                        for feature_1, feature_2 in combinations(features_extracted.columns, 2):
-                            correlation_value = correlations_matrix.loc[feature_1, feature_2]
-                            correlations_dict[f"{feature_1}*{feature_2}"] = correlation_value
-
-                        # Insert correlations for the video
-                        correlations_df = pd.concat([correlations_df, pd.Series(correlations_dict, name=clip_name)], axis=1)
-
-                    # Remove the clip from active clips
-                    active_clips.remove(clip)
-
-            frame_number += 1
-
-        vid.release()  # Release the video file
-
-    # If correlations are requested, export them
-    if correlations and not correlations_df.empty:
-        correlations_df = correlations_df.T
-        correlations_df.index.name = 'clip_name'
-        correlations_df.to_csv(correlations_path, index=True)
+#     return extracted_features
 
 
+# def pyafar_extractor(file: str, extractor: dict, features: None = None) -> pd.DataFrame:
+#     """
+#     Extract features using pyAFAR.
 
-def extract_features_clip(clip_path: str, extractors_objects: dict, extractors_features: dict) -> pd.DataFrame:
-    """
-    Extract features from a video clip using specified extractors.
+#     Args:
+#         file (str): Path to the video file.
+#         extractor (None): is not used
+#         features (None): is not used
+#     Returns:
+#         pd.DataFrame: DataFrame containing extracted features with frame numbers.
+#     """
+#     # Process the entire video
+#     result = adult_afar(
+#         filename=file,  
+#         AUs=extractor['AUs'], 
+#         GPU=extractor['GPU'], 
+#         max_frames=extractor['max_frames'], 
+#         AU_Int=extractor['AU_Int'], 
+#         batch_size=extractor['batch_size'], 
+#         PID=extractor['PID'])
+#     df = pd.DataFrame.from_dict(result)
+#     return df
 
-    Args:
-        clip_path (str): Path to the video clip.
-        extractors_objects (dict): Dictionary of initialized extractor objects.
-        extractors_features (dict): Dictionary specifying features to use from each extractor.
+# def mediapipe_extractor(clip_path: str, extractor: mp.solutions.pose.Pose, features: list) -> pd.DataFrame:
+#     """
+#     Extract features using MediaPipe Pose.
 
-    Returns:
-        pd.DataFrame: DataFrame containing extracted features.
-    """
-    extracted_features = pd.DataFrame()
+#     Args:
+#         clip_path (str): Path to the video clip.
+#         extractor (mp.solutions.pose.Pose): Initialized MediaPipe Pose extractor.
+#         features (list): List of feature names.
 
-    # Extract features using pyAFAR
-    if "pyafar" in extractors_objects:
-        pf_extracted_df = pyafar_extractor(
-            clip_path, 
-            extractors_objects["pyafar"], 
-            None,)
+#     Returns:
+#         pd.DataFrame: DataFrame containing extracted features.
+#     """
+#     vid_obj = cv2.VideoCapture(clip_path)
 
-        # Specific to pyAFAR data preprocessing
-        used_features = extractors_features["pyafar"]["used"]
-        pf_extracted_df = pf_extracted_df[used_features]
+#     if not vid_obj.isOpened():
+#         logging.warning(f"Cannot open video file {clip_path}")
+#         return pd.DataFrame(columns=features)
 
-        # Concatenate to the final DataFrame
-        extracted_features = pd.concat([extracted_features, pf_extracted_df], axis=1)
+#     landmarks_list = []
+#     while True:
+#         ret, frame = vid_obj.read()
+#         if not ret:
+#             break
+#         # Convert frame to RGB format as required by MediaPipe
+#         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-    # Extract features using MediaPipe
-    if "mediapipe" in extractors_objects:
-        mp_extracted_df = mediapipe_extractor(
-            clip_path,
-            extractors_objects["mediapipe"],
-            extractors_features["mediapipe"]["all"]
-        )
+#         results = extractor.process(frame_rgb)
+#         if results.pose_landmarks:
+#             landmarks = {features[idx]: (landmark.x, landmark.y) for idx, landmark in enumerate(results.pose_landmarks.landmark)}
+#         else:
+#             landmarks = {feature: None for feature in features}
+#         landmarks_list.append(landmarks)
 
-        # Specific to MediaPipe data preprocessing
-        used_features = extractors_features["mediapipe"]["used"]
-        mp_extracted_df = mp_extracted_df[used_features]
+#     vid_obj.release()
 
-        # Perform normalization for the whole DataFrame
-        mp_extracted_normalized_df = normalizators.normalize_landmarks_df(mp_extracted_df)
-
-        # Separate X and Y coordinates
-        for column in mp_extracted_normalized_df.columns:
-            if isinstance(mp_extracted_normalized_df[column].iloc[0], tuple):
-                mp_extracted_normalized_df[f"{column}_X"] = mp_extracted_normalized_df[column].apply(
-                    lambda coord: coord[0] if coord is not None else None)
-                mp_extracted_normalized_df[f"{column}_Y"] = mp_extracted_normalized_df[column].apply(
-                    lambda coord: coord[1] if coord is not None else None)
-                mp_extracted_normalized_df.drop(column, axis=1, inplace=True)  # Delete the initial column
-
-        # Concatenate to the final DataFrame
-        extracted_features = pd.concat([extracted_features, mp_extracted_normalized_df], axis=1)
-    # Add other extractors here if needed
-
-    # Handle NaN values, replace with mean if the number of NaNs is less then 30% of the values in the column
-    for column in extracted_features.columns:
-        nan_ratio = extracted_features[column].isna().mean()
-        if nan_ratio < 0.5:
-            # Replace NaN with column mean
-            extracted_features[column].fillna(extracted_features[column].mean(), inplace=True)
-        # Else leave NaNs as they are
-
-    return extracted_features
-
-
-def pyafar_extractor(file: str, extractor: dict, features: None = None) -> pd.DataFrame:
-    """
-    Extract features using pyAFAR.
-
-    Args:
-        file (str): Path to the video file.
-        extractor (None): is not used
-        features (None): is not used
-    Returns:
-        pd.DataFrame: DataFrame containing extracted features with frame numbers.
-    """
-    # Process the entire video
-    result = adult_afar(
-        filename=file,  
-        AUs=extractor['AUs'], 
-        GPU=extractor['GPU'], 
-        max_frames=extractor['max_frames'], 
-        AU_Int=extractor['AU_Int'], 
-        batch_size=extractor['batch_size'], 
-        PID=extractor['PID'])
-    df = pd.DataFrame.from_dict(result)
-    return df
-
-def mediapipe_extractor(clip_path: str, extractor: mp.solutions.pose.Pose, features: list) -> pd.DataFrame:
-    """
-    Extract features using MediaPipe Pose.
-
-    Args:
-        clip_path (str): Path to the video clip.
-        extractor (mp.solutions.pose.Pose): Initialized MediaPipe Pose extractor.
-        features (list): List of feature names.
-
-    Returns:
-        pd.DataFrame: DataFrame containing extracted features.
-    """
-    vid_obj = cv2.VideoCapture(clip_path)
-
-    if not vid_obj.isOpened():
-        logging.warning(f"Cannot open video file {clip_path}")
-        return pd.DataFrame(columns=features)
-
-    landmarks_list = []
-    while True:
-        ret, frame = vid_obj.read()
-        if not ret:
-            break
-        # Convert frame to RGB format as required by MediaPipe
-        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-
-        results = extractor.process(frame_rgb)
-        if results.pose_landmarks:
-            landmarks = {features[idx]: (landmark.x, landmark.y) for idx, landmark in enumerate(results.pose_landmarks.landmark)}
-        else:
-            landmarks = {feature: None for feature in features}
-        landmarks_list.append(landmarks)
-
-    vid_obj.release()
-
-    # Create DataFrame from list
-    return pd.DataFrame(landmarks_list)
+#     # Create DataFrame from list
+#     return pd.DataFrame(landmarks_list)
 
 if __name__ == "__main__":
     pass

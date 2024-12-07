@@ -15,7 +15,7 @@ import os
 import sys
 import logging
 import argparse
-from utils.extraction import extract_features
+from utils.extraction import extract_features, compute_correlations
 
 # Configure logging for better readability and context
 logging.basicConfig(
@@ -43,31 +43,33 @@ if __name__ == "__main__":
     logger.info(f"Parsing the arguments...")
     args = parse_arguments()
     dataset = args.dataset
+    config = args.config
 
     # Check if the provided dataset path is a valid directory
     logger.info(f"Validating the dataset '{dataset}'...")
     if not os.path.isdir(dataset):
         logger.error(f"Dataset directory '{dataset}' not found or is invalid.")
         raise FileNotFoundError(f"{dataset} is not a valid directory.")
-    
     # Ensure the directory contains only video files by checking file extensions
     files = [os.path.join(dataset, f) for f in os.listdir(dataset) if os.path.isfile(os.path.join(dataset, f))]
-    valid_extensions = ('.mp4', '.avi', '.mov', '.mkv', '.wmv', '.flv', '.webm', '.mpeg', '.mpg', '.3gp')
-    
+    valid_extensions = ('.mp4', '.avi', '.mov', '.mkv', '.wmv', '.flv', '.webm', '.mpeg', '.mpg', '.3gp')   
     # Check if all files have valid extensions
     if not all(f.lower().endswith(valid_extensions) for f in files):
         logger.error(f"The dataset directory '{dataset}' contains invalid files.")
         raise ValueError(f"The dataset directory '{dataset}' must contain only video files.")
 
     # Check the config file
-    config = args.config
+    logger.info(f"Validating the config file '{config}'...")
     if not os.path.isfile(config):
         logger.error(f"Config file '{config}' not found.")
         raise FileNotFoundError(f"The config file '{config}' does not exist.")
 
-    logger.info(f"Dataset '{dataset}' has been checked and is valid.")
-    logger.info("Starting the extraction process...")
 
     # Convert each video to clips and extract features
-    extract_features(files, config, correlations=True)
+    logger.info("Starting the extraction process...")
+    extract_features(files, config)
     logger.info("Feature extraction completed successfully.")
+    # Compute correaltions from the extrcated features
+    # logger.info("Starting the correlation computation process...")
+    # compute_correlations(config)
+    # logger.info("Correlation computation completed successfully.")

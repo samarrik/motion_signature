@@ -1,22 +1,11 @@
-# Configurations of clip yielding
-clip:
-  length: 10
-  overlap: 5
-
-# Extractors used in this particular cofiguration
 extractors:
-  - pyafar
-  - mediapipe
+  - py-feat
 
-# Path to the folder where all extracted data is stored
-extracted_path: data/extracted/
-
-# Path to the file where a file with all computer correlations will be stored
+extracted_path: data/extracted
 correlations_path: data/correlations.csv
   
 extractors_features:
-  # Mediapipe features
-  mediapipe:
+  py-feat:
     used:
       - leftShoulder
       - rightShoulder
@@ -59,25 +48,3 @@ extractors_features:
       - rightHeel
       - leftFootIndex
       - rightFootIndex
-  # Pyfeat features
-  pyafar:
-    used:
-      - Pitch
-      - Roll
-      - Yaw
-      - Eye Aspect Ratio
-      - Mouth Aspect Ratio
-      - Occ_au_1
-      - Occ_au_2
-      - Occ_au_4
-      - Occ_au_7
-      - Occ_au_15
-      - Occ_au_23
-      - Occ_au_24
-      - Occ_au_6
-      - Occ_au_10
-      - Occ_au_12
-      - Occ_au_14
-      - Occ_au_17
-    all:
-      # Too much, but can also yield normalized facial landmarks
