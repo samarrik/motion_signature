@@ -1,15 +1,51 @@
 # Data paths
 dataset_path: ../VoxCeleb_v2_chosen/test_comp_3
 extracted_features_raw_path: data/extracted/test_comp_3
-correlations_path: data/correlations_test_comp_3.csv
+correlations_path: data/correlations/correlations_test_comp_3
 
 # High-level video processing options
 compress_videos: False
-extract_features: True
-compute_correlations: False
+extract_features: False
+compute_correlations: True
 
 # Video compression
 compression_level: 1
+
+# Computation of correlations
+# Logical clips
+clips:
+  - 0:
+    - length: 20
+    - overlap: 10
+    - full: True
+  - 1:
+    - length: 15
+    - overlap: 10
+    - full: True
+  - 2:
+    - length: 10
+    - overlap: 5
+    - full: True
+  - 3:
+    - length: 10
+    - overlap: 5
+    - full: False
+  - 4:
+    - length: 5
+    - overlap: 2.5
+    - full: True
+  - 5:
+    - length: 5
+    - overlap: 2.5
+    - full: False
+  - 6:
+    - length: 2.5
+    - overlap: 1.25
+    - full: True
+  - 7:
+    - length: 2.5
+    - overlap: 1.25
+    - full: False
 
 # Feature extraction
 extractors:
@@ -17,49 +53,26 @@ extractors:
 
 extractors_features:
   py-feat:
-    used:
-      - leftShoulder
-      - rightShoulder
-      - leftElbow
-      - rightElbow
-      - leftWrist
-      - rightWrist
-      - leftEye
-    all:
-      - nose
-      - leftEyeInner
-      - leftEye
-      - leftEyeOuter
-      - rightEyeInner
-      - rightEye
-      - rightEyeOuter
-      - leftEar
-      - rightEar
-      - mouthLeft
-      - mouthRight
-      - leftShoulder
-      - rightShoulder
-      - leftElbow
-      - rightElbow
-      - leftWrist
-      - rightWrist
-      - leftPinky
-      - rightPinky
-      - leftIndex
-      - rightIndex
-      - leftThumb
-      - rightThumb
-      - leftHip
-      - rightHip
-      - leftKnee
-      - rightKnee
-      - leftAnkle
-      - rightAnkle
-      - leftHeel
-      - rightHeel
-      - leftFootIndex
-      - rightFootIndex
-
-# Computation of correlations
-
-
+    - Pitch
+    - Roll
+    - Yaw
+    - AU01
+    - AU02
+    - AU04
+    - AU05
+    - AU06
+    - AU07
+    - AU09
+    - AU10
+    - AU11
+    - AU12
+    - AU14
+    - AU15
+    - AU17
+    - AU20
+    - AU23
+    - AU24
+    - AU25
+    - AU26
+    - AU28
+    - AU43

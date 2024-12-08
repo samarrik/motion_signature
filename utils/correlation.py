@@ -2,14 +2,40 @@ import os
 import pandas as pd
 
 def compute_correlations(config):
+    # Get the path where the related extracted data is stored
+    extracted_features_raw_path = config.get("extracted_features_raw_path")
+    extracted_features_files = os.listdir(extracted_features_raw_path) if extracted_features_raw_path else []
 
-    # Use already extracted
+    # Get the path where the extracted correlations will be stored
+    correlations_path = config.get("correlations_path")
 
-    # Use only requested features
+    # Get the list of all extractors and their features used
+    extractors = cofig.get("extractors")
+    extractors_features = config.get("extractors_features")
+
+    # Select the reqired features
+    selected_features = None
+    for extractor in extractors:
+        selected_features.append(extractors_features[extractor])
+
+    # Logical clips configurations
+    clips = cofig.get("clips")
+    for _, clips_config in clips.items():
+        # New dataframe
+        correlations = pd.DataFrame()
+
+        length = clips_config["length"]
+        overlap = clips_config["overlap"]
+        full = clips_config["full"]
+
+        for file in extracted_features_files:
+            # Get the lo
+        
+
+    # Lengths of the clips (already extracted)+ their correlations
 
     # Compute correlations in all combinations (described b4)
     
-    pass
 
 
 
