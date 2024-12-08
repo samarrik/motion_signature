@@ -1,11 +1,11 @@
 # Data paths
-dataset_path: data/dataset
+dataset_path: ../VoxCeleb_v2_chosen_20id_60vid_20sec/test_comp_1
 extracted_features_raw_path: data/extracted
 correlations_path: data/correlations.csv
 
 # High-level video processing options
-compress_videos: False
-extract_features: True
+compress_videos: True
+extract_features: False
 compute_correlations: False
 
 # Video compression
