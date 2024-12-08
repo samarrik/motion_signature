@@ -52,7 +52,7 @@ def extract_features(files, config):
         logger.error("No extractors specified in the configuration.")
         raise ValueError("The configuration must specify at least one extractor.")
 
-    extracted_features_raw_path = config.get("extracted_features_raw_path")[0]
+    extracted_features_raw_path = config.get("extracted_features_raw_path")
     if not extracted_features_raw_path:
         logger.error("No extracted path specified in the configuration.")
         raise ValueError("The configuration must specify an extracted path.")
