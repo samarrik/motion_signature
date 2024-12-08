@@ -1,6 +1,6 @@
 # Data paths
-dataset_path: ../VoxCeleb_v2_chosen/train
-extracted_features_raw_path: data/extracted/train/
+dataset_path: data/dataset
+extracted_features_raw_path: data/extracted/train
 correlations_path: data/correlations_train.csv
 
 # High-level video processing options
@@ -60,9 +60,5 @@ extractors_features:
       - leftFootIndex
       - rightFootIndex
 
-extracted_features_raw_path:
-  - data/extracted
-
 # Computation of correlations
-
 

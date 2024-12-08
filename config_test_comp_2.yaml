@@ -60,9 +60,6 @@ extractors_features:
       - leftFootIndex
       - rightFootIndex
 
-extracted_features_raw_path:
-  - data/extracted
-
 # Computation of correlations
 
 
