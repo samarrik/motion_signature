@@ -42,8 +42,6 @@ def compress_videos(video_paths, config):
             logger.error(f"Video file not found: {video_path}")
             raise FileNotFoundError(f"Video file not found: {video_path}")
 
-        logger.info(f"Compressing video: {video_path} (CRF: {crf}, Preset: {preset})")
-
         ffmpeg_command = [
             "ffmpeg",
             "-i", video_path,
