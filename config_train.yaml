@@ -1,5 +1,5 @@
 # Data paths
-dataset_path: data/dataset
+dataset_path: ../VoxCeleb_v2_chosen/train
 extracted_features_raw_path: data/extracted/train
 correlations_path: data/correlations_train.csv
 
