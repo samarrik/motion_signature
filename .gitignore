@@ -6,6 +6,9 @@ data/*
 # Conda environment
 ms-env/
 
+# Test config
+config.yaml
+
 ### JupyterNotebooks ###
 # gitignore template for Jupyter Notebooks
 # website: http://jupyter.org/

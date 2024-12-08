@@ -1,220 +1,170 @@
 import os
+import logging
 import pandas as pd
+from tqdm import tqdm
+
+# Constants
+CONSTANT_VIDEO_SIZE_S = 20
+
+logger = logging.getLogger("correlations")
+
 
 def compute_correlations(config):
-    # Get the path where the related extracted data is stored
+    """
+    Compute correlation matrices for video features from extracted CSV files.
+    
+    For each video, the function splits the feature data into logical clips
+    (with optional overlap) and computes correlation matrices for each clip.
+    
+    Args:
+        config (dict): Configuration dictionary
+    """
+    # Validate configuration
     extracted_features_raw_path = config.get("extracted_features_raw_path")
-    extracted_features_files = os.listdir(extracted_features_raw_path) if extracted_features_raw_path else []
-
-    # Get the path where the extracted correlations will be stored
+    if not extracted_features_raw_path:
+        logger.error("No 'extracted_features_raw_path' specified in the configuration.")
+        raise ValueError("The configuration must specify 'extracted_features_raw_path'.")
+    
     correlations_path = config.get("correlations_path")
+    if not correlations_path:
+        logger.error("No 'correlations_path' specified in the configuration.")
+        raise ValueError("The configuration must specify 'correlations_path'.")
 
-    # Get the list of all extractors and their features used
-    extractors = cofig.get("extractors")
-    extractors_features = config.get("extractors_features")
+    extractors = config.get("extractors")
+    if not extractors:
+        logger.error("No extractors specified in the configuration.")
+        raise ValueError("The configuration must specify 'extractors'.")
 
-    # Select the reqired features
-    selected_features = None
+    extractors_features = config.get("extractors_features", {})
+    clips = config.get("clips")
+    if not clips:
+        logger.error("No clip configuration specified in the configuration.")
+        raise ValueError("The configuration must specify 'clips'.")
+
+    # Ensure output directory exists
+    os.makedirs(correlations_path, exist_ok=True)
+
+    # List all CSV files
+    extracted_features_files = [
+        os.path.join(extracted_features_raw_path, f)
+        for f in os.listdir(extracted_features_raw_path)
+        if f.lower().endswith('.csv')
+    ]
+
+    # If no CSV files found, log and return
+    if not extracted_features_files:
+        logger.warning("No CSV files found in the extracted_features_raw_path.")
+        return
+
+    # Determine the selected features from the configured extractors
+    selected_features = []
     for extractor in extractors:
-        selected_features.append(extractors_features[extractor])
+        features = extractors_features.get(extractor, [])
+        selected_features.extend(features)
 
-    # Logical clips configurations
-    clips = cofig.get("clips")
+    # Process each clip configuration
     for _, clips_config in clips.items():
-        # New dataframe
+        print(clips_config)
+        length_clip = clips_config.get("length", 20)
+        overlap_clip = clips_config.get("overlap", 10)
+        full_clip = clips_config.get("full", True)
+
+        # Prepare a DataFrame to store all correlations for this configuration
         correlations = pd.DataFrame()
 
-        length = clips_config["length"]
-        overlap = clips_config["overlap"]
-        full = clips_config["full"]
+        # Process each extracted feature file
+        logger.info(f"Processing clip configuration: l{length_clip}_o{overlap_clip}_f{int(full_clip)}")
+        for extracted_file in tqdm(extracted_features_files, desc="Computing Correlations"):
+            # File's basename
+            video_basename = os.path.splitext(os.path.basename(extracted_file))[0]
 
-        for file in extracted_features_files:
-            # Get the lo
-        
+            # Load the file into a DataFrame
+            df_video = pd.read_csv(extracted_file)
 
-    # Lengths of the clips (already extracted)+ their correlations
+            # Filter to selected features if provided
+            if selected_features:
+                existing_features = [col for col in selected_features if col in df_video.columns]
+                if not existing_features:
+                    logger.warning(f"No selected features found in file {extracted_file}. Skipping.")
+                    continue
+                df_video = df_video[existing_features]
 
-    # Compute correlations in all combinations (described b4)
-    
+            # Get the video's properties
+            frame_cnt_video = len(df_video)
+            fps_video = frame_cnt_video / CONSTANT_VIDEO_SIZE_S
 
+            # Compute clip size in frames
+            frame_cnt_clip = int(round(fps_video * length_clip))
+            frame_int_clip = int(round(fps_video * (length_clip - overlap_clip)))
 
+            # Generate a list of clip starts
+            clip_starts = []
+            current_start_frame = 0
+            if full_clip:
+                # Extract full-length overlapping clips
+                while current_start_frame + frame_cnt_clip <= frame_cnt_video:
+                    clip_starts.append(current_start_frame)
+                    current_start_frame = min(current_start_frame + frame_int_clip, frame_cnt_video)
+            else:
+                # If not full clips, take just one clip from the start if possible
+                if frame_cnt_clip <= frame_cnt_video:
+                    clip_starts.append(current_start_frame)
 
-# # Directory containing the CSV files
-# input_dir = "~/projects/motion_signature/data/extracted/"
-# output_file = "~/projects/motion_signature/data/correlations.csv"
+            # Process clips sequentially
+            active_clips = []
+            frame_number = 0
+            clip_idx = 0
 
-# # Expand the home directory path
-# input_dir = os.path.expanduser(input_dir)
-# output_file = os.path.expanduser(output_file)
+            while frame_number < frame_cnt_video:
+                if frame_number in clip_starts:
+                    active_clips.append({
+                        'start_frame': frame_number,
+                        'frames': [],
+                        'idx': None
+                    })
 
-# # Initialize a DataFrame to store all correlations
-# all_correlations = pd.DataFrame()
+                # Append the frame to all active clips
+                for clip in active_clips[:]:
+                    clip['frames'].append(frame_number)
 
-# # Process each CSV file in the directory
-# for file in os.listdir(input_dir):
-#     if file.endswith("_features.csv"):  # Check if the file is a features CSV
-#         file_path = os.path.join(input_dir, file)
-#         clip_name = os.path.splitext(file)[0]  # Use the file name without extension as clip name
+                    # Check if the clip has reached the required length
+                    if len(clip['frames']) == frame_cnt_clip:
+                        clip['idx'] = clip_idx
+                        clip_idx += 1
 
-#         # Load the CSV
-#         try:
-#             df = pd.read_csv(file_path)
-#         except Exception as e:
-#             print(f"Error loading {file_path}: {e}")
-#             continue
+                        # Extract the clip's frames
+                        df_clip = df_video.iloc[clip['frames']]
 
-#         # Compute correlations
-#         try:
-#             corr_matrix = df.corr()
+                        # Compute the correlation matrix
+                        corr_matrix = df_clip.corr()
 
-#             # Flatten the correlation matrix into pairs
-#             corr_pairs = {}
-#             for col1 in corr_matrix.columns:
-#                 for col2 in corr_matrix.columns:
-#                     if col1 != col2:  # Avoid self-correlations
-#                         corr_pairs[f"{col1}*{col2}"] = corr_matrix.loc[col1, col2]
+                        # Flatten the correlation matrix into pairs, excluding self-correlations
+                        corr_pairs = {
+                            f"{col1}*{col2}": corr_matrix.loc[col1, col2]
+                            for col1 in corr_matrix.columns
+                            for col2 in corr_matrix.columns
+                            if col1 != col2
+                        }
 
-#             # Add to the DataFrame
-#             all_correlations = pd.concat([all_correlations, pd.DataFrame(corr_pairs, index=[clip_name])])
-#         except Exception as e:
-#             print(f"Error processing correlations for {file_path}: {e}")
-#             continue
+                        # Add to the DataFrame with a unique clip name
+                        clip_label = f"{video_basename}_c{clip_idx:05d}"
+                        correlations = pd.concat([correlations, pd.DataFrame(corr_pairs, index=[clip_label])])
 
-# # Save the combined correlations to a CSV file
-# all_correlations.index.name = "clip_name"
-# all_correlations.to_csv(output_file)
+                        # Remove the completed clip
+                        active_clips.remove(clip)
 
-# print(f"Correlations saved to {output_file}")
+                frame_number += 1
 
+        # Save the computed correlations for this clip configuration
+        output_filename = f"correlations_l{length_clip}_o{overlap_clip}_f{int(full_clip)}.csv"
+        correlations_name = os.path.join(correlations_path, output_filename)
 
-
-# def extract_features_clip(clip_path: str, extractors_objects: dict, extractors_features: dict) -> pd.DataFrame:
-#     """
-#     Extract features from a video clip using specified extractors.
-
-#     Args:
-#         clip_path (str): Path to the video clip.
-#         extractors_objects (dict): Dictionary of initialized extractor objects.
-#         extractors_features (dict): Dictionary specifying features to use from each extractor.
-
-#     Returns:
-#         pd.DataFrame: DataFrame containing extracted features.
-#     """
-#     extracted_features = pd.DataFrame()
-
-#     # Extract features using pyAFAR
-#     if "pyafar" in extractors_objects:
-#         pf_extracted_df = pyafar_extractor(
-#             clip_path, 
-#             extractors_objects["pyafar"], 
-#             None,)
-
-#         # Specific to pyAFAR data preprocessing
-#         used_features = extractors_features["pyafar"]["used"]
-#         pf_extracted_df = pf_extracted_df[used_features]
-
-#         # Concatenate to the final DataFrame
-#         extracted_features = pd.concat([extracted_features, pf_extracted_df], axis=1)
-
-#     # Extract features using MediaPipe
-#     if "mediapipe" in extractors_objects:
-#         mp_extracted_df = mediapipe_extractor(
-#             clip_path,
-#             extractors_objects["mediapipe"],
-#             extractors_features["mediapipe"]["all"]
-#         )
-
-#         # Specific to MediaPipe data preprocessing
-#         used_features = extractors_features["mediapipe"]["used"]
-#         mp_extracted_df = mp_extracted_df[used_features]
-
-#         # Perform normalization for the whole DataFrame
-#         mp_extracted_normalized_df = normalizators.normalize_landmarks_df(mp_extracted_df)
-
-#         # Separate X and Y coordinates
-#         for column in mp_extracted_normalized_df.columns:
-#             if isinstance(mp_extracted_normalized_df[column].iloc[0], tuple):
-#                 mp_extracted_normalized_df[f"{column}_X"] = mp_extracted_normalized_df[column].apply(
-#                     lambda coord: coord[0] if coord is not None else None)
-#                 mp_extracted_normalized_df[f"{column}_Y"] = mp_extracted_normalized_df[column].apply(
-#                     lambda coord: coord[1] if coord is not None else None)
-#                 mp_extracted_normalized_df.drop(column, axis=1, inplace=True)  # Delete the initial column
-
-#         # Concatenate to the final DataFrame
-#         extracted_features = pd.concat([extracted_features, mp_extracted_normalized_df], axis=1)
-#     # Add other extractors here if needed
-
-#     # Handle NaN values, replace with mean if the number of NaNs is less then 30% of the values in the column
-#     for column in extracted_features.columns:
-#         nan_ratio = extracted_features[column].isna().mean()
-#         if nan_ratio < 0.5:
-#             # Replace NaN with column mean
-#             extracted_features[column].fillna(extracted_features[column].mean(), inplace=True)
-#         # Else leave NaNs as they are
-
-#     return extracted_features
-
-
-# def pyafar_extractor(file: str, extractor: dict, features: None = None) -> pd.DataFrame:
-#     """
-#     Extract features using pyAFAR.
-
-#     Args:
-#         file (str): Path to the video file.
-#         extractor (None): is not used
-#         features (None): is not used
-#     Returns:
-#         pd.DataFrame: DataFrame containing extracted features with frame numbers.
-#     """
-#     # Process the entire video
-#     result = adult_afar(
-#         filename=file,  
-#         AUs=extractor['AUs'], 
-#         GPU=extractor['GPU'], 
-#         max_frames=extractor['max_frames'], 
-#         AU_Int=extractor['AU_Int'], 
-#         batch_size=extractor['batch_size'], 
-#         PID=extractor['PID'])
-#     df = pd.DataFrame.from_dict(result)
-#     return df
-
-# def mediapipe_extractor(clip_path: str, extractor: mp.solutions.pose.Pose, features: list) -> pd.DataFrame:
-#     """
-#     Extract features using MediaPipe Pose.
-
-#     Args:
-#         clip_path (str): Path to the video clip.
-#         extractor (mp.solutions.pose.Pose): Initialized MediaPipe Pose extractor.
-#         features (list): List of feature names.
-
-#     Returns:
-#         pd.DataFrame: DataFrame containing extracted features.
-#     """
-#     vid_obj = cv2.VideoCapture(clip_path)
-
-#     if not vid_obj.isOpened():
-#         logging.warning(f"Cannot open video file {clip_path}")
-#         return pd.DataFrame(columns=features)
-
-#     landmarks_list = []
-#     while True:
-#         ret, frame = vid_obj.read()
-#         if not ret:
-#             break
-#         # Convert frame to RGB format as required by MediaPipe
-#         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-
-#         results = extractor.process(frame_rgb)
-#         if results.pose_landmarks:
-#             landmarks = {features[idx]: (landmark.x, landmark.y) for idx, landmark in enumerate(results.pose_landmarks.landmark)}
-#         else:
-#             landmarks = {feature: None for feature in features}
-#         landmarks_list.append(landmarks)
-
-#     vid_obj.release()
-
-#     # Create DataFrame from list
-#     return pd.DataFrame(landmarks_list)
+        try:
+            correlations.to_csv(correlations_name)
+            logger.info(f"Correlations saved to: {correlations_name}")
+        except Exception as e:
+            logger.error(f"Failed to save correlations file '{correlations_name}': {e}")
+            raise
 
 if __name__ == "__main__":
     pass

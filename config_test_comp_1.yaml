@@ -14,38 +14,38 @@ compression_level: 1
 # Computation of correlations
 # Logical clips
 clips:
-  - 0:
-    - length: 20
-    - overlap: 10
-    - full: True
-  - 1:
-    - length: 15
-    - overlap: 10
-    - full: True
-  - 2:
-    - length: 10
-    - overlap: 5
-    - full: True
-  - 3:
-    - length: 10
-    - overlap: 5
-    - full: False
-  - 4:
-    - length: 5
-    - overlap: 2.5
-    - full: True
-  - 5:
-    - length: 5
-    - overlap: 2.5
-    - full: False
-  - 6:
-    - length: 2.5
-    - overlap: 1.25
-    - full: True
-  - 7:
-    - length: 2.5
-    - overlap: 1.25
-    - full: False
+  0:
+    length: 20
+    overlap: 10
+    full: True
+  1:
+    length: 15
+    overlap: 7.5
+    full: True
+  2:
+    length: 10
+    overlap: 5
+    full: True
+  3:
+    length: 10
+    overlap: 5
+    full: False
+  4:
+    length: 5
+    overlap: 2.5
+    full: True
+  5:
+    length: 5
+    overlap: 2.5
+    full: False
+  6:
+    length: 2.5
+    overlap: 1.25
+    full: True
+  7:
+    length: 2.5
+    overlap: 1.25
+    full: False
 
 # Feature extraction
 extractors:
