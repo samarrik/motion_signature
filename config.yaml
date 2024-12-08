@@ -1,5 +1,5 @@
 # Data paths
-dataset_path: ../VoxCeleb_v2_chosen/test_comp_2
+dataset_path: ../VoxCeleb_v2_chosen/test_comp_3
 extracted_features_raw_path: data/extracted
 correlations_path: data/correlations.csv
 
@@ -9,7 +9,7 @@ extract_features: False
 compute_correlations: False
 
 # Video compression
-compression_level: 2 
+compression_level: 3
 
 # Feature extraction
 extractors:
