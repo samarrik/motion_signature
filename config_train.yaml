@@ -1,0 +1,68 @@
+# Data paths
+dataset_path: ../VoxCeleb_v2_chosen/train
+extracted_features_raw_path: data/extracted/train
+correlations_path: data/correlations_train.csv
+
+# High-level video processing options
+compress_videos: False
+extract_features: True
+compute_correlations: False
+
+# Video compression
+compression_level: 1
+
+# Feature extraction
+extractors:
+  - py-feat
+
+extractors_features:
+  py-feat:
+    used:
+      - leftShoulder
+      - rightShoulder
+      - leftElbow
+      - rightElbow
+      - leftWrist
+      - rightWrist
+      - leftEye
+    all:
+      - nose
+      - leftEyeInner
+      - leftEye
+      - leftEyeOuter
+      - rightEyeInner
+      - rightEye
+      - rightEyeOuter
+      - leftEar
+      - rightEar
+      - mouthLeft
+      - mouthRight
+      - leftShoulder
+      - rightShoulder
+      - leftElbow
+      - rightElbow
+      - leftWrist
+      - rightWrist
+      - leftPinky
+      - rightPinky
+      - leftIndex
+      - rightIndex
+      - leftThumb
+      - rightThumb
+      - leftHip
+      - rightHip
+      - leftKnee
+      - rightKnee
+      - leftAnkle
+      - rightAnkle
+      - leftHeel
+      - rightHeel
+      - leftFootIndex
+      - rightFootIndex
+
+extracted_features_raw_path:
+  - data/extracted
+
+# Computation of correlations
+
+
