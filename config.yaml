@@ -1,15 +1,15 @@
 # Data paths
-dataset_path: ../VoxCeleb_v2_chosen/test_comp_3
-extracted_features_raw_path: data/extracted
+dataset_path: ../VoxCeleb_v2_chosen/train
+extracted_features_raw_path: data/extracted/train
 correlations_path: data/correlations.csv
 
 # High-level video processing options
-compress_videos: True
-extract_features: False
+compress_videos: False
+extract_features: True
 compute_correlations: False
 
 # Video compression
-compression_level: 3
+compression_level: 1
 
 # Feature extraction
 extractors:
